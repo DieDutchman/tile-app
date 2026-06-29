@@ -1,0 +1,1700 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Tile Job Calculator</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+:root{
+  --primary:#E8500A;--primary-dark:#C43D00;
+  --dark:#1A1A1A;--muted:#888;
+  --border:#E8E8E8;--bg:#F5F4F0;--card:#FFFFFF;
+  --green:#1A7A4A;--green-bg:#E8F5EE;
+  --orange:#E8500A;--orange-bg:#FFF0EA;
+  --blue:#1A5CA8;--blue-bg:#EAF0FB;
+  --red:#C43D00;--red-bg:#FFECE8;
+  --teal:#0E7C7B;--teal-bg:#E2F4F4;
+  --purple:#6B3FA0;--purple-bg:#F0EAFA;
+  --sand:#7A5C1E;--sand-bg:#FBF4E6;
+  --radius:12px;
+}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--dark);min-height:100vh;max-width:640px;margin:0 auto}
+
+/* ── HEADER ── */
+.hdr{background:var(--dark);color:#fff;padding:14px 16px 12px;position:sticky;top:0;z-index:100;box-shadow:0 2px 12px rgba(0,0,0,.25)}
+.hdr-top{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.hdr-top h1{font-size:17px;font-weight:700;flex:1;letter-spacing:-0.3px}
+.logo{background:var(--primary);border-radius:8px;width:30px;height:30px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
+.job-bar{display:flex;gap:8px;align-items:center}
+.job-bar select{flex:1;background:#2D2D2D;color:#fff;border:1px solid #444;border-radius:8px;padding:9px 12px;font-size:13px;font-family:inherit;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23aaa' d='M6 8L1 3h10z'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center;padding-right:30px}
+.job-bar select:focus{outline:none;border-color:var(--primary)}
+.ibtn{width:36px;height:36px;border-radius:8px;border:none;background:#2D2D2D;color:#ccc;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:.15s}
+.ibtn:hover{background:var(--primary);color:#fff}
+.ibtn.danger:hover{background:var(--red)}
+
+/* ── TABS ── */
+.tabs{display:flex;background:#fff;border-bottom:2px solid var(--border);position:sticky;top:88px;z-index:99}
+.tab{flex:1;padding:11px 4px;text-align:center;font-size:12px;font-weight:600;color:var(--muted);cursor:pointer;border-bottom:2.5px solid transparent;margin-bottom:-2px;transition:.15s;letter-spacing:.3px;text-transform:uppercase}
+.tab.active{color:var(--primary);border-bottom-color:var(--primary)}
+
+/* ── LAYOUT ── */
+.content{padding:14px;padding-bottom:60px}
+.tab-panel{display:none}.tab-panel.active{display:block}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+.field{display:flex;flex-direction:column;gap:4px}
+.field.full{grid-column:1/-1}
+label{font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.6px}
+input[type=text],input[type=date],input[type=number],select{width:100%;padding:9px 11px;border:1.5px solid var(--border);border-radius:8px;font-size:14px;font-family:inherit;color:var(--dark);background:#fff;transition:.15s}
+input:focus,select:focus{outline:none;border-color:var(--primary)}
+.dvd{height:1px;background:var(--border);margin:10px 0}
+.sec-hdr{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.7px;margin:16px 0 8px;display:flex;align-items:center;gap:6px;cursor:pointer;user-select:none;-webkit-user-select:none}
+.sec-hdr::after{content:'';flex:1;height:1px;background:var(--border)}
+.sec-chev{font-size:14px;text-transform:none;letter-spacing:0;transition:transform .2s;display:inline-block;line-height:1;color:var(--muted)}
+.sec-chev.collapsed{transform:rotate(-90deg)}
+.sec-body.collapsed{display:none}
+.bath-body.collapsed{display:none}
+.bath-collapse-btn{width:28px;height:28px;border:none;background:var(--blue-bg);color:var(--blue);border-radius:7px;cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:transform .2s;line-height:1;font-family:inherit}
+.bath-collapse-btn.collapsed{transform:rotate(-90deg)}
+
+/* ── TILE TYPE PILLS ── */
+.tile-type-row{display:flex;align-items:center;gap:5px;margin:5px 0 9px;flex-wrap:wrap}
+.tile-type-lbl{font-size:9px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;white-space:nowrap;margin-right:2px}
+.tpill{padding:4px 9px;border-radius:20px;border:1.5px solid var(--border);background:#fff;font-size:10px;font-weight:700;cursor:pointer;font-family:inherit;transition:.15s;white-space:nowrap;color:var(--muted)}
+.tpill.active{background:var(--primary);border-color:var(--primary);color:#fff}
+.tpill:hover:not(.active){border-color:var(--primary);color:var(--primary)}
+.tpill.sm{padding:3px 7px;font-size:9px}
+
+/* Focus wall override strip */
+.fw-override-bar{display:flex;align-items:center;gap:8px;padding:6px 9px;border-radius:8px;background:var(--orange-bg);border:1px solid #F4C4AA;margin-bottom:6px}
+.fw-override-lbl{font-size:10px;font-weight:700;color:var(--orange);flex:1}
+.fw-override-tog{width:34px;height:20px;border-radius:10px;background:var(--border);position:relative;transition:.2s;flex-shrink:0;cursor:pointer}
+.fw-override-tog.on{background:var(--orange)}
+.fw-override-tog::after{content:'';position:absolute;width:16px;height:16px;border-radius:50%;background:#fff;top:2px;left:2px;transition:.2s;box-shadow:0 1px 3px rgba(0,0,0,.2)}
+.fw-override-tog.on::after{transform:translateX(14px)}
+.fw-override-pills{margin-top:5px;margin-bottom:2px}
+
+/* ── CARDS ── */
+.card{background:var(--card);border-radius:var(--radius);padding:15px;margin-bottom:11px;border:1px solid var(--border);box-shadow:0 1px 3px rgba(0,0,0,.04)}
+.card-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:13px}
+.card-title{font-size:13px;font-weight:700;display:flex;align-items:center;gap:8px;letter-spacing:-0.2px}
+.chip{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:7px;font-size:13px}
+.chip-o{background:var(--orange-bg);color:var(--orange)}
+.chip-g{background:var(--green-bg);color:var(--green)}
+.chip-b{background:var(--blue-bg);color:var(--blue)}
+
+/* ── BATHROOM CARD ── */
+.bath-card{background:#fff;border:2px solid #C8DCF5;border-radius:14px;padding:14px;margin-bottom:12px}
+.bath-card-hdr{display:flex;align-items:center;gap:8px;margin-bottom:12px}
+.bath-num{width:28px;height:28px;border-radius:50%;background:var(--blue-bg);color:var(--blue);font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.bath-name-input{flex:1;border:none;background:transparent;font-size:14px;font-weight:700;font-family:'DM Sans',sans-serif;color:var(--dark);padding:2px 0;outline:none;border-bottom:1.5px solid transparent}
+.bath-name-input:focus{border-bottom-color:var(--primary)}
+.bath-del{width:28px;height:28px;border:none;background:var(--red-bg);color:var(--red);border-radius:7px;cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.bath-sub-hdr{font-size:10px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;display:flex;align-items:center;justify-content:space-between;margin:10px 0 5px;gap:6px}
+.bath-sub-hdr .sub-note{font-size:9px;text-transform:none;letter-spacing:0;font-weight:400;color:var(--muted);flex:1}
+.sub-btn{font-size:10px;font-weight:700;padding:4px 10px;border-radius:6px;border:none;background:var(--primary);color:#fff;cursor:pointer;font-family:inherit}
+.add-bath-btn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:14px;border:2px dashed #B0CCF0;border-radius:14px;background:var(--blue-bg);color:var(--blue);font-size:13px;font-weight:700;cursor:pointer;margin-bottom:12px;font-family:inherit;transition:.15s}
+.add-bath-btn:hover{border-color:var(--blue);background:#D5E6F8}
+
+/* ── WALL ROWS ── */
+.wall-labels{display:grid;grid-template-columns:1fr 1fr 50px 36px 28px;gap:5px;margin-bottom:4px}
+.wall-labels span,.wall-labels-fw span{font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;text-align:center}
+.wall-labels-fw{display:grid;grid-template-columns:1fr 1fr 50px 36px;gap:5px;margin-bottom:4px}
+.wall-row-fw{display:grid;grid-template-columns:1fr 1fr 50px 36px;gap:5px;align-items:center;margin-bottom:5px}
+.wall-row{display:grid;grid-template-columns:1fr 1fr 50px 36px 28px;gap:5px;align-items:center;margin-bottom:5px}
+.wall-row input,.wall-row-fw input{padding:8px 5px;font-size:13px;font-family:'DM Mono',monospace;text-align:center;border-radius:8px;border:1.5px solid var(--border);width:100%;background:#fff}
+.wall-row input:focus,.wall-row-fw input:focus{border-color:var(--primary);outline:none}
+.wall-area{font-size:12px;font-weight:700;font-family:'DM Mono',monospace;color:var(--primary);text-align:center}
+.wp-btn{width:36px;height:34px;border-radius:8px;border:1.5px solid var(--border);background:#fff;color:var(--muted);font-size:9px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;letter-spacing:.2px;transition:.15s;font-family:inherit}
+.wp-btn.on{background:var(--teal-bg);border-color:var(--teal);color:var(--teal)}
+.rmv{width:28px;height:28px;border:none;background:var(--red-bg);color:var(--red);border-radius:7px;cursor:pointer;font-size:15px;display:flex;align-items:center;justify-content:center}
+.add-side-btn{display:flex;align-items:center;justify-content:center;gap:5px;width:100%;padding:8px;border:1.5px dashed var(--border);border-radius:8px;background:var(--bg);color:var(--muted);font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;transition:.15s;margin-top:4px}
+.add-side-btn:hover{border-color:var(--primary);color:var(--primary)}
+
+/* ── PANEL ROWS ── */
+.panel-labels-nowp{display:grid;grid-template-columns:1fr 1fr 50px 28px;gap:5px;margin-bottom:4px}
+.panel-labels-nowp span{font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;text-align:center}
+.panel-row-nowp{display:grid;grid-template-columns:1fr 1fr 50px 28px;gap:5px;align-items:center;margin-bottom:5px}
+.panel-row-nowp input{padding:8px 5px;font-size:13px;font-family:'DM Mono',monospace;text-align:center;border-radius:8px;border:1.5px solid var(--border);width:100%;background:#fff}
+.panel-row-nowp input:focus{border-color:var(--primary);outline:none}
+.sf-labels{display:grid;grid-template-columns:1fr 1fr 50px 36px 28px;gap:5px;margin-bottom:4px}
+.sf-labels span{font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;text-align:center}
+.sf-row{display:grid;grid-template-columns:1fr 1fr 50px 36px 28px;gap:5px;align-items:center;margin-bottom:5px}
+.sf-row input{padding:8px 5px;font-size:13px;font-family:'DM Mono',monospace;text-align:center;border-radius:8px;border:1.5px solid var(--border);width:100%;background:#fff}
+.sf-row input:focus{border-color:var(--primary);outline:none}
+
+.sec-total{text-align:right;font-size:12px;color:var(--muted);margin-top:3px;padding-top:5px;border-top:1px dashed var(--border)}
+.sec-total strong{color:var(--primary);font-family:'DM Mono',monospace}
+.m2-inp{width:50px;padding:8px 4px;font-size:12px;font-weight:700;font-family:'DM Mono',monospace;text-align:center;border-radius:8px;border:1.5px solid var(--border);background:#fafafa;color:var(--primary);cursor:text}
+.m2-inp:focus{border-color:var(--primary);outline:none;background:#fff}
+.m2-inp.direct{background:var(--blue-bg);border-color:var(--blue);color:var(--blue)}
+.lw-dim{opacity:0.28 !important;pointer-events:none !important}
+.wp-note{text-align:right;font-size:11px;color:var(--teal);margin-top:2px}
+.wp-note strong{font-family:'DM Mono',monospace}
+.no-item{font-size:12px;color:var(--muted);padding:4px 0;font-style:italic}
+
+/* ── AUTO A12 PANEL ── */
+.auto-panel{background:#FAFAFA;border:1.5px solid #DDD5F0;border-radius:10px;padding:10px 12px;margin-top:10px}
+.auto-panel-title{font-size:10px;font-weight:800;color:var(--purple);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}
+.auto-note{font-size:10px;color:var(--muted);margin-top:6px;line-height:1.5;border-top:1px dashed #E0D8F8;padding-top:5px}
+
+/* ── SLIDING DOOR ROWS ── */
+.door-row{display:grid;grid-template-columns:1fr 80px 28px;gap:6px;align-items:center;margin-bottom:7px}
+.door-row input[type=text]{padding:8px 9px;font-size:13px;border-radius:8px;border:1.5px solid var(--border);background:#fff}
+.door-row input[type=number]{padding:8px 6px;font-size:13px;font-family:'DM Mono',monospace;text-align:center;border-radius:8px;border:1.5px solid var(--border);background:#fff}
+.door-row input:focus{border-color:var(--primary);outline:none}
+.door-labels{display:grid;grid-template-columns:1fr 80px 28px;gap:6px;margin-bottom:5px}
+.door-labels span{font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px}
+.door-tag{font-size:10px;font-weight:700;padding:2px 7px;border-radius:20px;display:inline-block}
+.tag-sdk{background:var(--orange-bg);color:var(--orange)}
+.tag-a12{background:var(--purple-bg);color:var(--purple)}
+.door-feeds{display:flex;gap:4px;flex-wrap:wrap;margin-top:6px;padding-top:6px;border-top:1px dashed var(--border)}
+
+/* ── ALUM ROW ── */
+.alum-row{display:flex;align-items:center;gap:8px;padding:9px 0;border-top:1px dashed var(--border);margin-top:6px}
+.alum-label{font-size:12px;font-weight:700;color:var(--muted);flex:1}
+.alum-select{flex:1;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;font-family:inherit;color:var(--dark);background:#fff;appearance:none}
+.alum-select:focus{border-color:var(--primary);outline:none}
+.alum-input{width:72px;padding:7px 8px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Mono',monospace;text-align:right;background:#fff}
+.alum-input:focus{border-color:var(--primary);outline:none}
+.alum-unit{font-size:11px;font-weight:600;color:var(--muted);width:16px}
+
+/* ── STOEP CARD ── */
+.stoep-card{background:#fff;border:2px solid #E8DFC8;border-radius:14px;padding:14px;margin-bottom:12px}
+.stoep-card-hdr{display:flex;align-items:center;gap:8px;margin-bottom:12px}
+.stoep-num{width:28px;height:28px;border-radius:50%;background:var(--sand-bg);color:var(--sand);font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.stoep-name-input{flex:1;border:none;background:transparent;font-size:14px;font-weight:700;font-family:'DM Sans',sans-serif;color:var(--dark);padding:2px 0;outline:none;border-bottom:1.5px solid transparent}
+.stoep-name-input:focus{border-bottom-color:var(--primary)}
+.add-stoep-btn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:14px;border:2px dashed #D4C4A0;border-radius:14px;background:var(--sand-bg);color:var(--sand);font-size:13px;font-weight:700;cursor:pointer;margin-bottom:12px;font-family:inherit;transition:.15s}
+.add-stoep-btn:hover{border-color:var(--sand);background:#F2E8D2}
+
+/* ── COUNTS ── */
+.cnt-row{display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)}
+.cnt-row:last-child{border-bottom:none}
+.cnt-ctrl{display:flex;align-items:center;gap:10px}
+.cnt-btn{width:30px;height:30px;border-radius:50%;border:2px solid var(--primary);background:#fff;color:var(--primary);font-size:18px;font-weight:300;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.cnt-val{font-size:18px;font-weight:700;min-width:26px;text-align:center;font-family:'DM Mono',monospace}
+.cnt-label{font-size:13px;font-weight:500;flex:1}
+
+/* ── LINEAR ── */
+.lin-row{display:flex;align-items:center;gap:8px;padding:9px 0;border-bottom:1px solid var(--border)}
+.lin-row:last-child{border-bottom:none}
+.lin-label{flex:1;font-size:13px;font-weight:500;line-height:1.4}
+.lin-note{font-size:10px;color:var(--purple);display:block;margin-top:1px}
+.lin-input{width:88px;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Mono',monospace;text-align:right;background:#fff}
+.lin-input:focus{border-color:var(--primary);outline:none}
+.lin-unit{font-size:11px;font-weight:600;color:var(--muted);width:16px}
+
+/* ── TOGGLES ── */
+.tog-row{display:flex;align-items:center;justify-content:space-between;padding:10px 0}
+.tog-info .tlabel{font-size:13px;font-weight:600}
+.tog-info .tsub{font-size:11px;color:var(--muted);margin-top:2px}
+.toggle{width:42px;height:24px;border-radius:12px;background:var(--border);cursor:pointer;position:relative;transition:.2s;flex-shrink:0}
+.toggle.on{background:var(--primary)}
+.toggle::after{content:'';position:absolute;width:20px;height:20px;border-radius:50%;background:#fff;top:2px;left:2px;transition:.2s;box-shadow:0 1px 3px rgba(0,0,0,.2)}
+.toggle.on::after{transform:translateX(18px)}
+
+/* ── BUTTONS ── */
+.btn{padding:9px 15px;border-radius:8px;border:none;font-size:12px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:5px;transition:.15s;font-family:inherit}
+.btn-primary{background:var(--primary);color:#fff}.btn-primary:hover{background:var(--primary-dark)}
+.btn-ghost{background:var(--bg);color:var(--dark);border:1.5px solid var(--border)}.btn-ghost:hover{border-color:var(--primary);color:var(--primary)}
+.btn-sm{padding:6px 11px;font-size:11px}
+
+/* ── SUMMARY ── */
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:11px}
+.stat{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:13px}
+.stat-label{font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
+.stat-val{font-size:19px;font-weight:700;margin-top:3px;font-family:'DM Mono',monospace}
+.stat-val.green{color:var(--green)}.stat-val.blue{color:var(--blue)}.stat-val.orange{color:var(--orange)}.stat-val.red{color:var(--red)}
+.stbl{width:100%;border-collapse:collapse;font-size:12px}
+.stbl th{padding:7px 8px;background:var(--bg);font-size:10px;text-transform:uppercase;color:var(--muted);letter-spacing:.4px;font-weight:700;text-align:left}
+.stbl th:not(:first-child){text-align:right}
+.stbl td{padding:7px 8px;border-bottom:1px solid var(--border);vertical-align:middle}
+.stbl td:not(:first-child){text-align:right;font-family:'DM Mono',monospace;font-size:11px}
+.stbl .foot-sub td{font-weight:700;background:var(--bg);border-top:2px solid var(--border)}
+.stbl .foot-total td{font-weight:700;font-size:13px;background:var(--dark);color:#fff}
+.stbl .foot-total td:first-child{border-radius:0 0 0 8px}
+.stbl .foot-total td:last-child{border-radius:0 0 8px 0}
+.empty-row td{text-align:center!important;color:var(--muted);padding:14px!important;font-size:12px;font-style:italic}
+.stbl .group-row td{background:#F8F0FF;font-weight:700;font-size:11px;color:var(--purple);border-top:1px solid #E0D8F8}
+
+/* ── PRICES ── */
+.ptbl{width:100%;border-collapse:collapse;font-size:12px}
+.ptbl th{padding:7px 6px;background:var(--bg);font-size:10px;text-transform:uppercase;color:var(--muted);letter-spacing:.4px;font-weight:700;text-align:left}
+.ptbl th:not(:first-child){text-align:right}
+.ptbl td{padding:5px 6px;border-bottom:1px solid var(--border);vertical-align:middle}
+.ptbl td:not(:first-child){text-align:right}
+.ptbl input{width:80px;padding:5px 7px;border:1.5px solid var(--border);border-radius:6px;font-size:12px;font-family:'DM Mono',monospace;text-align:right;background:#fff}
+.ptbl input:focus{border-color:var(--primary);outline:none}
+.profit-pill{font-size:10px;font-weight:700;padding:2px 7px;border-radius:20px;background:var(--green-bg);color:var(--green)}
+.ptbl-section{font-size:11px;font-weight:700;color:var(--muted);padding:9px 6px 4px;letter-spacing:.5px;text-transform:uppercase;border-top:2px solid var(--border)}
+
+/* ── MODAL ── */
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:200;display:none;align-items:flex-end;justify-content:center}
+.modal-bg.open{display:flex}
+.modal{background:#fff;border-radius:20px 20px 0 0;padding:22px 18px 32px;width:100%;max-width:640px;max-height:85vh;overflow-y:auto}
+.modal h2{font-size:18px;font-weight:700;margin-bottom:16px}
+.modal-actions{display:flex;gap:8px;margin-top:16px}
+.modal-actions .btn{flex:1;padding:13px}
+.info-box{background:var(--blue-bg);border:1px solid #B8D0F5;border-radius:8px;padding:10px 12px;font-size:12px;color:var(--blue);margin-bottom:12px}
+</style>
+</head>
+<body>
+
+<div class="hdr">
+  <div class="hdr-top">
+    <div class="logo">🧱</div>
+    <h1>Tile Job Calculator</h1>
+  </div>
+  <div class="job-bar">
+    <select id="jobSel" onchange="loadJob(this.value)"><option value="">— Select a Job —</option></select>
+    <button class="ibtn" onclick="openModal()" title="New Job">＋</button>
+    <button class="ibtn" onclick="duplicateJob()" title="Duplicate Job">⧉</button>
+    <button class="ibtn danger" onclick="deleteJob()" title="Delete Job">🗑</button>
+  </div>
+</div>
+
+<div class="tabs">
+  <div class="tab active" onclick="switchTab('meas')">📐 Measure</div>
+  <div class="tab" onclick="switchTab('summ')">📊 Summary</div>
+  <div class="tab" onclick="switchTab('pric')">💰 Prices</div>
+</div>
+
+<div class="content">
+<div id="tab-meas" class="tab-panel active">
+
+  <div class="card">
+    <div class="card-header"><div class="card-title"><span class="chip chip-b">📋</span> Job Details</div></div>
+    <div class="grid2">
+      <div class="field"><label>Job Number</label><input type="text" id="f-name" placeholder="e.g. Job_W18" oninput="autoSave()"></div>
+      <div class="field"><label>Date</label><input type="date" id="f-date" oninput="autoSave()"></div>
+      <div class="field full"><label>Client Name</label><input type="text" id="f-client" placeholder="e.g. Mr. Smith" oninput="autoSave()"></div>
+      <div class="field full"><label>Address / Notes</label><input type="text" id="f-notes" placeholder="Site address or notes..." oninput="autoSave()"></div>
+      <div class="field"><label>Tile Wastage %</label><input type="number" id="f-wastage" placeholder="0" min="0" max="30" step="1" oninput="autoSave()"></div>
+    </div>
+  </div>
+
+  <div class="sec-hdr" onclick="toggleSec('bathrooms')">Bathroom Areas <span class="sec-chev" id="chev-bathrooms">▾</span></div>
+  <div class="sec-body" id="sb-bathrooms">
+    <div id="bath-list"></div>
+    <button class="add-bath-btn" onclick="addBath()">＋ Add Bathroom Area</button>
+  </div>
+
+  <div class="sec-hdr" onclick="toggleSec('floors')">Other Floor Tiling <span class="sec-chev" id="chev-floors">▾</span></div>
+  <div class="sec-body" id="sb-floors">
+    <div class="card">
+      <div class="card-header"><div class="card-title"><span class="chip chip-g">🟩</span> Normal Tiles (600×600)</div><button class="btn btn-primary btn-sm" onclick="addFloorPanel('nt')">+ Area</button></div>
+      <div class="panel-labels-nowp"><span>Length (m)</span><span>Width (m)</span><span>m²</span><span></span></div>
+      <div id="panels-nt"></div>
+      <div class="sec-total" id="tot-nt">Total: <strong>0.00 m²</strong></div>
+    </div>
+    <div class="card">
+      <div class="card-header"><div class="card-title"><span class="chip chip-g">🟦</span> Oversized Tiles (1200×600)</div><button class="btn btn-primary btn-sm" onclick="addFloorPanel('ot')">+ Area</button></div>
+      <div class="panel-labels-nowp"><span>Length (m)</span><span>Width (m)</span><span>m²</span><span></span></div>
+      <div id="panels-ot"></div>
+      <div class="sec-total" id="tot-ot">Total: <strong>0.00 m²</strong></div>
+    </div>
+    <div class="card">
+      <div class="card-header"><div class="card-title"><span class="chip chip-o">🟧</span> Subway Tiles</div><button class="btn btn-primary btn-sm" onclick="addFloorPanel('st')">+ Area</button></div>
+      <div class="panel-labels-nowp"><span>Length (m)</span><span>Width (m)</span><span>m²</span><span></span></div>
+      <div id="panels-st"></div>
+      <div class="sec-total" id="tot-st">Total: <strong>0.00 m²</strong></div>
+    </div>
+    <div class="card">
+      <div class="card-header"><div class="card-title"><span class="chip chip-o">🔷</span> Mosaic Tiles</div><button class="btn btn-primary btn-sm" onclick="addFloorPanel('mt')">+ Area</button></div>
+      <div class="panel-labels-nowp"><span>Length (m)</span><span>Width (m)</span><span>m²</span><span></span></div>
+      <div id="panels-mt"></div>
+      <div class="sec-total" id="tot-mt">Total: <strong>0.00 m²</strong></div>
+    </div>
+  </div>
+
+  <div class="sec-hdr" onclick="toggleSec('patio')">Patio <span class="sec-chev" id="chev-patio">▾</span></div>
+  <div class="sec-body" id="sb-patio">
+    <div class="card">
+      <div class="card-header"><div class="card-title"><span class="chip chip-g">🌿</span> Patio Tiling</div><button class="btn btn-primary btn-sm" onclick="addFloorPanel('pt')">+ Area</button></div>
+      <!-- Tile type for patio -->
+      <div class="tile-type-row" id="patio-tile-row"></div>
+      <div class="panel-labels-nowp"><span>Length (m)</span><span>Width (m)</span><span>m²</span><span></span></div>
+      <div id="panels-pt"></div>
+      <div class="sec-total" id="tot-pt">Total: <strong>0.00 m²</strong></div>
+      <div class="dvd"></div>
+      <div class="tog-row">
+        <div class="tog-info"><div class="tlabel">Waterproofing</div><div class="tsub">Include waterproofing for patio (invoice &amp; materials)</div></div>
+        <div class="toggle" id="tog-wpp" onclick="togglePatioWP()"></div>
+      </div>
+      <div class="tog-row">
+        <div class="tog-info"><div class="tlabel">Tiler did WP</div><div class="tsub">Tiler gets R200 flat fee for patio WP</div></div>
+        <div class="toggle" id="tog-patio-frank-wp" onclick="togglePatioFrankWP()"></div>
+      </div>
+      <div class="alum-row">
+        <div class="alum-label">Aluminium 45° Ramp edging</div>
+        <input class="alum-input" type="number" id="patio-a45" placeholder="0.0" min="0" step="0.1" oninput="autoSave()">
+        <span class="alum-unit">m</span>
+      </div>
+      <div style="font-size:10px;color:var(--purple);text-align:right;margin-top:3px">Added to Aluminium 45° total</div>
+    </div>
+  </div>
+
+  <div class="sec-hdr" onclick="toggleSec('doors')">Sliding Doors <span class="sec-chev" id="chev-doors">▾</span></div>
+  <div class="sec-body" id="sb-doors">
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title"><span class="chip chip-o">🚪</span> Sliding Door Skirtings</div>
+        <button class="btn btn-primary btn-sm" onclick="addDoor()">+ Door</button>
+      </div>
+      <div id="door-labels" style="display:none"><div class="door-labels"><span>Description</span><span style="text-align:center">Width (m)</span><span></span></div></div>
+      <div id="door-list"></div>
+      <div id="door-feeds" class="door-feeds" style="display:none">
+        <span style="font-size:10px;color:var(--muted);font-weight:600;margin-right:2px">Width auto-adds to:</span>
+        <span class="door-tag tag-sdk">Sliding Door Skirting</span>
+        <span class="door-tag tag-a12">Aluminium 12mm</span>
+      </div>
+      <div class="sec-total" id="door-tot" style="display:none">Total: <strong>0.00 m</strong></div>
+      <div id="door-empty" style="font-size:12px;color:var(--muted);font-style:italic">No doors — tap + Door to add</div>
+    </div>
+  </div>
+
+  <div class="sec-hdr" onclick="toggleSec('stoep')">Front Stoep <span class="sec-chev" id="chev-stoep">▾</span></div>
+  <div class="sec-body" id="sb-stoep">
+    <div id="stoep-list"></div>
+    <button class="add-stoep-btn" onclick="addStoep()">＋ Add Front Stoep Area</button>
+  </div>
+
+  <div class="sec-hdr" onclick="toggleSec('profiles')">Profiles &amp; Skirtings <span class="sec-chev" id="chev-profiles">▾</span></div>
+  <div class="sec-body" id="sb-profiles">
+    <div class="card">
+      <div class="card-header"><div class="card-title"><span class="chip chip-b">📏</span> Linear Metres</div></div>
+      <div class="lin-row"><div class="lin-label">Aluminium 12mm<span class="lin-note" id="a12-note" style="display:none"></span></div><input class="lin-input" type="number" id="li-a12" placeholder="0.0" min="0" step="0.1" oninput="autoSave()"><span class="lin-unit">m</span></div>
+      <div class="lin-row"><div class="lin-label">Aluminium 10mm<span class="lin-note" id="a10-note" style="display:none"></span></div><input class="lin-input" type="number" id="li-a10" placeholder="0.0" min="0" step="0.1" oninput="autoSave()"><span class="lin-unit">m</span></div>
+      <div class="lin-row"><div class="lin-label">Aluminium 45° Ramp<span class="lin-note" id="a45-note" style="display:none"></span></div><input class="lin-input" type="number" id="li-a45" placeholder="0.0" min="0" step="0.1" oninput="autoSave()"><span class="lin-unit">m</span></div>
+      <div class="lin-row"><div class="lin-label">Skirting — Plaster<span class="lin-note" id="skp-note" style="display:none"></span></div><input class="lin-input" type="number" id="li-skp" placeholder="0.0" min="0" step="0.1" oninput="autoSave()"><span class="lin-unit">m</span></div>
+      <div class="lin-row"><div class="lin-label">Skirting — Wood</div><input class="lin-input" type="number" id="li-skw" placeholder="0.0" min="0" step="0.1" oninput="autoSave()"><span class="lin-unit">m</span></div>
+      <div class="lin-row"><div class="lin-label">Sliding Door Skirting<span class="lin-note" id="sdk-note" style="display:none"></span></div><input class="lin-input" type="number" id="li-sdk" placeholder="0.0" min="0" step="0.1" oninput="autoSave()"><span class="lin-unit">m</span></div>
+      <div class="lin-row"><div class="lin-label">Sika / PVC Expansion Joint</div><input class="lin-input" type="number" id="li-ska" placeholder="0.0" min="0" step="0.1" oninput="autoSave()"><span class="lin-unit">m</span></div>
+    </div>
+  </div>
+
+</div><!-- /meas -->
+
+<!-- ══ SUMMARY ══ -->
+<div id="tab-summ" class="tab-panel">
+  <div class="stats">
+    <div class="stat"><div class="stat-label">Invoice excl. VAT</div><div class="stat-val blue" id="st-inv">R0.00</div></div>
+    <div class="stat"><div class="stat-label">Invoice incl. VAT</div><div class="stat-val blue" id="st-vat">R0.00</div></div>
+    <div class="stat"><div class="stat-label">Total Cost</div><div class="stat-val orange" id="st-cost">R0.00</div></div>
+    <div class="stat"><div class="stat-label">Your Profit</div><div class="stat-val green" id="st-prof">R0.00</div></div>
+  </div>
+  <div class="card">
+    <div class="card-header"><div class="card-title"><span class="chip chip-o">👷</span> Tiler's Payment</div><span style="font-family:'DM Mono',monospace;font-weight:700;font-size:15px;color:var(--orange)" id="frank-hdr">R0.00</span></div>
+    <table class="stbl"><thead><tr><th>Item</th><th>Qty</th><th>Rate</th><th>Amount</th></tr></thead><tbody id="frank-body"></tbody></table>
+  </div>
+  <div class="card">
+    <div class="card-header"><div class="card-title"><span class="chip chip-b">🧱</span> Materials Cost</div><span style="font-family:'DM Mono',monospace;font-weight:700;font-size:15px;color:var(--blue)" id="mat-hdr">R0.00</span></div>
+    <table class="stbl"><thead><tr><th>Item</th><th>Qty</th><th>Rate</th><th>Amount</th></tr></thead><tbody id="mat-body"></tbody></table>
+  </div>
+  <div class="card">
+    <div class="card-header"><div class="card-title"><span class="chip chip-g">📄</span> Client Invoice</div><button class="btn btn-ghost btn-sm" onclick="copyInvoice()">📋 Copy</button></div>
+    <table class="stbl">
+      <thead><tr><th>Item</th><th>Qty</th><th>Rate</th><th>Amount</th></tr></thead>
+      <tbody id="inv-body"></tbody>
+      <tfoot>
+        <tr class="foot-sub"><td colspan="3">Subtotal (excl. VAT)</td><td id="inv-sub">R0.00</td></tr>
+        <tr class="foot-sub"><td colspan="3">VAT (<span id="vat-pct">15</span>%)</td><td id="inv-vat">R0.00</td></tr>
+        <tr class="foot-total"><td colspan="3">TOTAL (incl. VAT)</td><td id="inv-tot">R0.00</td></tr>
+      </tfoot>
+    </table>
+  </div>
+</div>
+
+<!-- ══ PRICES ══ -->
+<div id="tab-pric" class="tab-panel">
+  <div class="info-box">ℹ️ All prices from your <strong>Real Costs 2026</strong> sheet. Changes save automatically.</div>
+  <div class="card">
+    <div class="card-header"><div class="card-title"><span class="chip chip-o">💰</span> Rate Sheet</div><button class="btn btn-ghost btn-sm" onclick="resetPrices()">↺ Reset Defaults</button></div>
+    <table class="ptbl"><thead><tr><th>Description</th><th>Unit</th><th>Tiler (R)</th><th>Invoice (R)</th><th>Profit</th></tr></thead><tbody id="ptbl-body"></tbody></table>
+  </div>
+  <div class="card">
+    <div class="card-header"><div class="card-title"><span class="chip chip-o">📈</span> Rate Adjustment</div></div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:10px">Apply a % increase to all Tiler or Invoice rates at once. Cannot be undone except via Reset Defaults.</div>
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+      <div class="field" style="flex:1;margin:0"><label>% Increase</label><input type="number" id="adj-pct" placeholder="e.g. 5" min="0" max="100" step="0.1" style="padding:9px 11px;border:1.5px solid var(--border);border-radius:8px;font-size:14px;font-family:inherit;width:100%"></div>
+    </div>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-ghost" style="flex:1" onclick="applyRateAdj('frank')">Apply to Tiler</button>
+      <button class="btn btn-ghost" style="flex:1" onclick="applyRateAdj('inv')">Apply to Invoice</button>
+    </div>
+    <div id="price-hist-section" style="display:none;margin-top:14px;border-top:1px solid var(--border);padding-top:12px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+        <span style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px">Adjustment History</span>
+        <button class="btn btn-ghost btn-sm" onclick="clearPriceHistory()">Clear</button>
+      </div>
+      <select id="price-hist-sel" onchange="showHistoryDetail(this.value)" style="width:100%;padding:9px 11px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;color:var(--dark);background:#fff;appearance:none">
+        <option value="">— Select an adjustment to view —</option>
+      </select>
+      <div id="price-hist-detail" style="display:none;margin-top:10px;overflow-x:auto">
+        <table class="ptbl" style="min-width:320px">
+          <thead><tr><th>Description</th><th style="text-align:right">Before</th><th style="text-align:right">After</th><th style="text-align:right">Change</th></tr></thead>
+          <tbody id="price-hist-rows"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-header"><div class="card-title"><span class="chip chip-b">🔍</span> Cost Breakdown</div></div>
+    <div style="font-size:11px;color:var(--muted);margin-bottom:8px">Read-only. Shows how each rate is built up. Edit rates in the Rate Sheet above.</div>
+    <div style="overflow-x:auto">
+      <table class="ptbl" id="breakdown-tbl" style="min-width:480px">
+        <thead><tr>
+          <th>Description</th><th>Tiler</th><th>Materials</th><th>Cost/Co.</th><th>Invoice</th><th>Profit</th><th>Margin</th>
+        </tr></thead>
+        <tbody id="breakdown-body"></tbody>
+      </table>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-header"><div class="card-title"><span class="chip chip-b">⚙️</span> Settings</div></div>
+    <div class="field"><label>VAT Rate (%)</label><input type="number" id="s-vat" value="15" min="0" max="50" step="0.5" oninput="saveSett()"></div>
+  </div>
+  <div class="card">
+    <div class="card-header"><div class="card-title"><span class="chip chip-g">💾</span> Data Management</div></div>
+    <div style="display:flex;gap:8px;margin-bottom:8px">
+      <button class="btn btn-ghost" style="flex:1" onclick="exportJobs()">⬇ Export Jobs</button>
+      <button class="btn btn-ghost" style="flex:1" onclick="document.getElementById('import-file').click()">⬆ Import Jobs</button>
+    </div>
+    <input type="file" id="import-file" accept=".json" style="display:none" onchange="importJobs(this)">
+    <div style="font-size:11px;color:var(--muted)">Export saves all jobs as a JSON backup file. Import merges or replaces from a backup.</div>
+  </div>
+  <div class="card">
+    <div class="card-header"><div class="card-title"><span class="chip chip-b">☁️</span> Cloud Sync</div><span id="sb-dot" style="width:8px;height:8px;border-radius:50%;background:var(--border);flex-shrink:0"></span></div>
+    <div class="field" style="margin-bottom:8px">
+      <label>Supabase Project URL</label>
+      <input type="url" id="sb-url" placeholder="https://xxxxxx.supabase.co" oninput="saveSbConfig()">
+    </div>
+    <div class="field" style="margin-bottom:12px">
+      <label>Anon Key</label>
+      <input type="password" id="sb-key" placeholder="eyJ..." oninput="saveSbConfig()">
+    </div>
+    <div style="display:flex;gap:8px;margin-bottom:8px">
+      <button class="btn btn-primary" style="flex:1" onclick="sbPush()">⬆ Push to Cloud</button>
+      <button class="btn btn-ghost" style="flex:1" onclick="sbPull()">⬇ Pull from Cloud</button>
+    </div>
+    <div id="sb-status" style="font-size:11px;color:var(--muted);text-align:center;min-height:16px"></div>
+  </div>
+</div>
+</div>
+
+<!-- MODAL -->
+<div class="modal-bg" id="modal">
+  <div class="modal">
+    <h2>➕ New Job</h2>
+    <div class="field" style="margin-bottom:11px"><label>Job Number / Name</label><input type="text" id="m-name" placeholder="e.g. Job_W18" style="font-size:15px;padding:12px"></div>
+    <div class="field"><label>Client Name</label><input type="text" id="m-client" placeholder="e.g. Mr. Smith" style="font-size:15px;padding:12px"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="createJob()">Create Job</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════
+// PRICING — Real Costs 2026
+// Note: 'nf' and 'fs' removed — tile type selector handles these
+// ═══════════════════════════════════════════════════════
+const DP = {
+  sw:  { label:'Shower Walls',             unit:'m²', frank:90,    mat:108.87, inv:233.20 },
+  sf:  { label:'Shower Floors',            unit:'m²', frank:169,   mat:108.87, inv:386.90 },
+  nt:  { label:'Normal Tiling',            unit:'m²', frank:90,    mat:143.44, inv:275.60 },
+  ot:  { label:'Oversized Tiling',         unit:'m²', frank:169,   mat:143.44, inv:318.00 },
+  st:  { label:'Subway Tiling',            unit:'m²', frank:116,   mat:143.44, inv:381.60 },
+  mt:  { label:'Mosaic Tiling',            unit:'m²', frank:169,   mat:143.44, inv:498.20 },
+  pt:  { label:'Patio Tiling',             unit:'m²', frank:90,    mat:108.87, inv:206.70 },
+  wps:  { label:'Sealing of Showers',         unit:'m²', frank:0,   mat:56.95,  inv:296.80 },
+  wpp:  { label:'Waterproofing (Patio)',      unit:'m²', frank:0,   mat:44.45,  inv:212.00 },
+  wpsh: { label:'WP — per Shower (Tiler)',    unit:'ea', frank:400, mat:0,      inv:0      },
+  wppt: { label:'WP — Patio (Tiler)',         unit:'ea', frank:200, mat:0,      inv:0      },
+  a12: { label:'Aluminium 12mm',           unit:'m',  frank:0,     mat:19.17,  inv:51.94  },
+  a10: { label:'Aluminium 10mm',           unit:'m',  frank:0,     mat:16.77,  inv:47.70  },
+  a45: { label:'Aluminium 45° Ramp',       unit:'m',  frank:0,     mat:76.67,  inv:111.30 },
+  skp: { label:'Skirting (Plaster)',       unit:'m',  frank:37,    mat:11.76,  inv:68.90  },
+  skw: { label:'Skirting (Wood)',          unit:'m',  frank:37,    mat:22.50,  inv:79.50  },
+  sdk: { label:'Sliding Door Skirting',    unit:'m',  frank:37,    mat:11.76,  inv:68.90  },
+  ska: { label:'Sika / PVC Joint',         unit:'m',  frank:0,     mat:35.42,  inv:55.12  },
+  ni:  { label:'Niche',                    unit:'ea', frank:164,   mat:72.17,  inv:315.50 },
+  be:  { label:'Bench',                    unit:'ea', frank:164,   mat:72.17,  inv:295.50 },
+};
+
+// INVOICE CONSOLIDATION RULES
+// Tile areas: each tile type key gets its own line — 'nt' collects ALL normal tile areas
+// (walls, floors, stoep, patio — wherever that tile type is chosen)
+// wps/wpp each get own invoice line; skp+sdk → "Tile Skirting"; wpsh/wppt Frank-only (inv=0, not in invoice)
+const INVOICE_ORDER = ['sw','sf','nt','ot','st','mt','pt','wps','wpp','SKIRT','skw','a12','a10','a45','ska','ni','be'];
+const TILE_KEYS = new Set(['sw','sf','nt','ot','st','mt','pt']);
+
+const PRICE_GROUPS = [
+  { title:'Tile Rates',            keys:['sw','sf','nt','ot','st','mt','pt'] },
+  { title:'Waterproofing — Invoice & Materials (per m²)', keys:['wps','wpp'] },
+  { title:'Waterproofing — Tiler Flat Fees (per job)',   keys:['wpsh','wppt'] },
+  { title:'Profiles & Skirtings',  keys:['a12','a10','a45','skp','skw','sdk','ska'] },
+  { title:'Feature Items',         keys:['ni','be'] },
+];
+
+// Tile type options per context
+const WALL_TILES  = [{v:'sw',l:'Shower'},{v:'nt',l:'Normal'},{v:'ot',l:'Oversize'},{v:'st',l:'Subway'},{v:'mt',l:'Mosaic'}];
+const SF_TILES    = [{v:'sf',l:'Shower Floor'},{v:'nt',l:'Normal'},{v:'mt',l:'Mosaic'}];
+const NF_TILES    = [{v:'nt',l:'Normal'},{v:'ot',l:'Oversize'},{v:'st',l:'Subway'},{v:'mt',l:'Mosaic'}];
+const PATIO_TILES = [{v:'pt',l:'Patio'},{v:'nt',l:'Normal'},{v:'ot',l:'Oversize'}];
+const STOEP_TILES = [{v:'nt',l:'Normal'},{v:'ot',l:'Oversize'},{v:'st',l:'Subway'},{v:'mt',l:'Mosaic'}];
+const ALUM_OPTIONS= [{value:'none',label:'No aluminium'},{value:'a12',label:'Alum 12mm'},{value:'a10',label:'Alum 10mm'},{value:'a45',label:'Alum 45° Ramp'}];
+
+const FLOOR_SECS  = ['nt','ot','st','mt','pt'];
+const LIN_KEYS    = ['a12','a10','a45','skp','skw','sdk','ska'];
+
+// ═══════════════════════════════════════════════════════
+// STATE
+// Bath: { id, name,
+//   wallTileType:'sw',
+//   focusWall:{ l, h, wps, tileOverride:false, tileType:'sw' },
+//   sideWalls:[{ id, l, h, wps }],   ← inherit wallTileType
+//   sFloorType:'sf', sFloors:[{id,l,w,wps}],
+//   nFloorType:'nt', nFloors:[{id,l,w}],
+//   niches:0, benches:0 }
+// ═══════════════════════════════════════════════════════
+let jobs={}, curId=null, P={}, sett={vat:15}, priceHistory=[];
+let baths=[], panels={}, patioWP=false, patioFrankWP=false, lins={};
+let patioTileType='pt', patioA45='';
+let doors=[], stoeps=[];
+
+// ── Boot ──
+window.onload = () => {
+  jobs         = JSON.parse(localStorage.getItem('tjc_jobs')      || '{}');
+  P            = JSON.parse(localStorage.getItem('tjc_prices')    || 'null') || clone(DP);
+  sett         = JSON.parse(localStorage.getItem('tjc_sett')      || '{"vat":15}');
+  priceHistory = JSON.parse(localStorage.getItem('tjc_price_hist')|| '[]');
+  Object.keys(DP).forEach(k=>{ if(!P[k]) P[k]=clone(DP[k]); });
+  // Remove legacy nf/fs from prices if present
+  delete P.nf; delete P.fs;
+  // Migrate: wps/wpp frank now 0 (flat-fee model via wpsh/wppt)
+  if(P.wps.frank===27.22) P.wps.frank=0;
+  if(P.wpp.frank===27.22) P.wpp.frank=0;
+  rebuildJobSel(); renderPriceTable(); renderCostBreakdown(); renderPriceHistory(); renderPatioTileRow();
+  document.getElementById('s-vat').value        = sett.vat;
+  document.getElementById('vat-pct').textContent = sett.vat;
+  const last=localStorage.getItem('tjc_last');
+  if(last&&jobs[last]){document.getElementById('jobSel').value=last;loadJob(last);}
+  loadSecState();
+  const sbUrl=localStorage.getItem('tjc_sb_url');
+  const sbKey=localStorage.getItem('tjc_sb_key');
+  const sbTs =localStorage.getItem('tjc_sb_ts');
+  if(sbUrl){const el=document.getElementById('sb-url');if(el)el.value=sbUrl;}
+  if(sbKey){const el=document.getElementById('sb-key');if(el)el.value=sbKey;}
+  if(sbTs) sbSetStatus('✓ Last sync: '+sbTs,true);
+};
+
+// ── Utils ──
+const clone=x=>JSON.parse(JSON.stringify(x));
+const fmt  =n=>'R'+n.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g,',');
+const pf   =x=>parseFloat(x)||0;
+const uid  =()=>Date.now()+'_'+Math.random().toString(36).slice(2,5);
+const wallArea   =w=>w.direct?pf(w.m2||0):pf(w.l)*pf(w.h);
+const panelArea  =arr=>(arr||[]).reduce((s,r)=>s+(r.direct?pf(r.m2||0):pf(r.l)*pf(r.w)),0);
+const panelWPArea=arr=>(arr||[]).reduce((s,r)=>r.wps?s+(r.direct?pf(r.m2||0):pf(r.l)*pf(r.w)):s,0);
+const floorArea  =k=>panelArea(panels[k]);
+
+// ── Bath aggregates ──
+function bathA12Auto(b){
+  const fw=b.focusWall||{},sw=b.sideWalls||[];
+  const tops=pf(fw.l)+sw.reduce((s,w)=>s+pf(w.l),0);
+  const sideH=sw.reduce((s,w)=>s+pf(w.h),0);
+  const extH=sw.length===0?pf(fw.h)*2:sw.length===1?pf(fw.h):0;
+  return tops+sideH+extH;
+}
+function fwEffectiveType(b){ const fw=b.focusWall||{}; return (fw.tileOverride&&fw.tileType)||b.wallTileType||'sw'; }
+function bathWallArea(b){
+  const fw=b.focusWall||{};
+  return wallArea(fw)+(b.sideWalls||[]).reduce((s,w)=>s+wallArea(w),0);
+}
+function bathWallWPArea(b){
+  const fw=b.focusWall||{};
+  return (fw.wps?wallArea(fw):0)+(b.sideWalls||[]).reduce((s,w)=>s+(w.wps?wallArea(w):0),0);
+}
+const totalAutoA12 =()=>baths.reduce((s,b)=>s+bathA12Auto(b),0);
+const totalWPArea  =()=>baths.reduce((s,b)=>s+bathWallWPArea(b)+panelWPArea(b.sFloors),0);
+const totalNiches  =()=>baths.reduce((s,b)=>s+(b.niches||0),0);
+const totalBenches =()=>baths.reduce((s,b)=>s+(b.benches||0),0);
+const totalDoorLen =()=>doors.reduce((s,d)=>s+pf(d.l),0);
+const stoepAlum    =t=>stoeps.filter(s=>s.alumType===t).reduce((s,st)=>s+pf(st.alumL),0);
+
+// ── computeQ: routes all m² into price key buckets based on tile type ──
+function computeQ(){
+  const Q={};
+  const add=(k,v)=>{ if(v>0) Q[k]=(Q[k]||0)+v; };
+
+  baths.forEach(b=>{
+    const wallType=b.wallTileType||'sw';
+    // Focus wall
+    add(fwEffectiveType(b), wallArea(b.focusWall||{}));
+    // Side walls (inherit wallTileType — no per-side override)
+    (b.sideWalls||[]).forEach(w=>add(wallType, wallArea(w)));
+    // Shower floors
+    const sfType=b.sFloorType||'sf';
+    add(sfType, panelArea(b.sFloors));
+    // Normal floors
+    const nfType=b.nFloorType||'nt';
+    add(nfType, panelArea(b.nFloors));
+  });
+
+  // Other floor panels (tile type fixed by the card)
+  ['nt','ot','st','mt'].forEach(k=>add(k, floorArea(k)));
+
+  // Patio (tile type selectable)
+  add(patioTileType||'pt', floorArea('pt'));
+
+  // Stoeps (tile type selectable per stoep)
+  stoeps.forEach(st=>add(st.tileType||'nt', panelArea(st.panels)));
+
+  // Waterproofing — area (for materials & invoice)
+  add('wps', totalWPArea());
+  add('wpp', patioWP?floorArea('pt'):0);
+  // Waterproofing — Frank flat fees (count of showers/patios where Frank did WP)
+  add('wpsh', baths.filter(b=>b.frankWP).length);
+  add('wppt', patioFrankWP?1:0);
+
+  // Aluminium
+  const manA12=lins.a12||pf(document.getElementById('li-a12')?.value);
+  const manA10=lins.a10||pf(document.getElementById('li-a10')?.value);
+  const manA45=lins.a45||pf(document.getElementById('li-a45')?.value);
+  const pA45  =pf(patioA45||document.getElementById('patio-a45')?.value);
+  add('a12', manA12+totalAutoA12()+totalDoorLen()+stoepAlum('a12'));
+  add('a10', manA10+stoepAlum('a10'));
+  add('a45', manA45+pA45+stoepAlum('a45'));
+
+  // Skirtings
+  add('skp', lins.skp||pf(document.getElementById('li-skp')?.value));
+  add('skw', lins.skw||pf(document.getElementById('li-skw')?.value));
+  add('sdk', (lins.sdk||pf(document.getElementById('li-sdk')?.value))+totalDoorLen());
+  add('ska', lins.ska||pf(document.getElementById('li-ska')?.value));
+
+  // Counts
+  add('ni', totalNiches());
+  add('be', totalBenches());
+
+  return Q;
+}
+
+// ── Build Frank rows (detailed, per tile type) ──
+function buildFrankRows(Q){
+  const rows=[];
+  Object.keys(Q).forEach(k=>{
+    if(!P[k]||!Q[k]) return;
+    const p=P[k], qty=Q[k];
+    if(p.frank>0) rows.push({label:p.label, qty, unit:p.unit, rate:p.frank, amt:qty*p.frank});
+  });
+  return rows;
+}
+
+// ── Build Materials rows (detailed) ──
+function buildMatRows(Q){
+  const rows=[];
+  const wastage=(curId&&jobs[curId]?.wastage)||0;
+  Object.keys(Q).forEach(k=>{
+    if(!P[k]||!Q[k]) return;
+    const p=P[k];
+    const qty=TILE_KEYS.has(k)&&wastage>0 ? Q[k]*(1+wastage/100) : Q[k];
+    if(p.mat>0) rows.push({label:p.label, qty, unit:p.unit, rate:p.mat, amt:qty*p.mat});
+  });
+  return rows;
+}
+
+// ── Build Invoice lines (CONSOLIDATED per spec) ──
+function buildInvoiceLines(Q){
+  const lines=[];
+
+  // Per-tile-type lines (each tile type that has area → own line)
+  ['sw','sf','nt','ot','st','mt','pt'].forEach(k=>{
+    if(!Q[k]||!P[k]) return;
+    lines.push({key:k, label:P[k].label, qty:Q[k], unit:'m²', rate:P[k].inv, amt:Q[k]*P[k].inv});
+  });
+
+  // Waterproofing — separate lines per type
+  if(Q.wps&&P.wps) lines.push({key:'wps', label:'Sealing of Showers', qty:Q.wps, unit:'m²', rate:P.wps.inv, amt:Q.wps*P.wps.inv});
+  if(Q.wpp&&P.wpp) lines.push({key:'wpp', label:P.wpp.label, qty:Q.wpp, unit:'m²', rate:P.wpp.inv, amt:Q.wpp*P.wpp.inv});
+
+  // CONSOLIDATED: Tile Skirting (skp + sdk — same rate R68.90)
+  const skirtQty=(Q.skp||0)+(Q.sdk||0);
+  if(skirtQty>0) lines.push({key:'SKIRT', label:'Tile Skirting', qty:skirtQty, unit:'m', rate:P.skp.inv, amt:skirtQty*P.skp.inv});
+
+  // Wood skirting stays separate
+  if(Q.skw) lines.push({key:'skw', label:P.skw.label, qty:Q.skw, unit:'m', rate:P.skw.inv, amt:Q.skw*P.skw.inv});
+
+  // Profiles
+  ['a12','a10','a45','ska'].forEach(k=>{
+    if(!Q[k]||!P[k]) return;
+    lines.push({key:k, label:P[k].label, qty:Q[k], unit:'m', rate:P[k].inv, amt:Q[k]*P[k].inv});
+  });
+
+  // Feature items
+  ['ni','be'].forEach(k=>{
+    if(!Q[k]||!P[k]) return;
+    lines.push({key:k, label:P[k].label, qty:Q[k], unit:'ea', rate:P[k].inv, amt:Q[k]*P[k].inv});
+  });
+
+  return lines;
+}
+
+// ── Job management ──
+function rebuildJobSel(){
+  const sel=document.getElementById('jobSel'),cur=sel.value;
+  sel.innerHTML='<option value="">— Select a Job —</option>';
+  Object.keys(jobs).sort((a,b)=>(jobs[b].ts||0)-(jobs[a].ts||0)).forEach(id=>{
+    const o=document.createElement('option');
+    o.value=id;o.textContent=jobs[id].name||id;sel.appendChild(o);
+  });
+  if(cur)sel.value=cur;
+}
+function openModal(){document.getElementById('modal').classList.add('open');setTimeout(()=>document.getElementById('m-name').focus(),150);}
+function closeModal(){document.getElementById('modal').classList.remove('open');}
+function createJob(){
+  const name=document.getElementById('m-name').value.trim()||'New Job';
+  const client=document.getElementById('m-client').value.trim();
+  const id='j'+Date.now();
+  jobs[id]={name,client,ts:Date.now(),date:new Date().toISOString().split('T')[0],
+    notes:'',baths:[],panels:{},patioWP:false,patioFrankWP:false,lins:{},patioTileType:'pt',patioA45:'',doors:[],stoeps:[],wastage:0};
+  saveJobs();rebuildJobSel();closeModal();
+  document.getElementById('m-name').value='';document.getElementById('m-client').value='';
+  document.getElementById('jobSel').value=id;loadJob(id);
+}
+function loadJob(id){
+  curId=id||null;if(!id){clearAll();return;}
+  localStorage.setItem('tjc_last',id);
+  const j=jobs[id];
+  document.getElementById('f-name').value    =j.name    ||'';
+  document.getElementById('f-date').value    =j.date    ||'';
+  document.getElementById('f-client').value  =j.client  ||'';
+  document.getElementById('f-notes').value   =j.notes   ||'';
+  document.getElementById('f-wastage').value =j.wastage ||'';
+  baths         =migrateBaths({baths:clone(j.baths||migrateBaths(j))});
+  const rawPanels=clone(j.panels||{});
+  ['nt','ot','st','mt','pt'].forEach(k=>{if(rawPanels[k])rawPanels[k]=rawPanels[k].map(migratePanel);});
+  panels        =rawPanels;
+  patioWP       =!!j.patioWP;
+  patioFrankWP  =!!j.patioFrankWP;
+  lins          =clone(j.lins          ||{});
+  patioTileType =j.patioTileType       ||'pt';
+  patioA45      =j.patioA45            ||'';
+  doors         =clone(j.doors         ||[]);
+  stoeps        =clone(j.stoeps||[]).map(s=>({...s,panels:(s.panels||[]).map(migratePanel)}));
+  renderAllBaths();
+  FLOOR_SECS.forEach(k=>renderFloorPanels(k));
+  document.getElementById('tog-wpp').classList.toggle('on',patioWP);
+  document.getElementById('tog-patio-frank-wp').classList.toggle('on',patioFrankWP);
+  LIN_KEYS.forEach(k=>{const el=document.getElementById('li-'+k);if(el)el.value=lins[k]||'';});
+  document.getElementById('patio-a45').value=patioA45;
+  renderPatioTileRow();
+  renderAllDoors();renderAllStoeps();
+  updateAutoNotes();calcAll();
+}
+function migratePanel(r){return {direct:false,m2:'',...r};}
+function migrateBaths(j){
+  const src=j.baths||j.showers||[];
+  return src.map(b=>{
+    if(b.focusWall){
+      const nb={wallTileType:'sw',sFloorType:'sf',nFloorType:'nt',niches:0,benches:0,frankWP:false,...b};
+      if(!nb.focusWall.hasOwnProperty('direct')){nb.focusWall={direct:false,m2:'',...nb.focusWall};}
+      nb.sideWalls=(nb.sideWalls||[]).map(migratePanel);
+      nb.sFloors=(nb.sFloors||[]).map(migratePanel);
+      nb.nFloors=(nb.nFloors||[]).map(migratePanel);
+      return nb;
+    }
+    const walls=b.walls||[];
+    return {
+      id:b.id, name:b.name, wallTileType:'sw', sFloorType:'sf', nFloorType:'nt',
+      focusWall:walls[0]?{l:walls[0].l||'',h:walls[0].w||walls[0].h||'',wps:!!walls[0].wps,tileOverride:false,tileType:'sw',direct:false,m2:''}:{l:'',h:'',wps:false,tileOverride:false,tileType:'sw',direct:false,m2:''},
+      sideWalls:walls.slice(1,3).map(w=>({id:uid(),l:w.l||'',h:w.w||w.h||'',wps:!!w.wps,direct:false,m2:''})),
+      sFloors:(b.sFloors||b.floors||[]).map(migratePanel),
+      nFloors:(b.nFloors||[]).map(migratePanel),
+      niches:0, benches:0,
+    };
+  });
+}
+function clearAll(){
+  baths=[];panels={};patioWP=false;patioFrankWP=false;lins={};patioTileType='pt';patioA45='';doors=[];stoeps=[];
+  ['f-name','f-date','f-client','f-notes','f-wastage'].forEach(i=>document.getElementById(i).value='');
+  renderAllBaths();FLOOR_SECS.forEach(k=>{panels[k]=[];renderFloorPanels(k);});
+  LIN_KEYS.forEach(k=>{const el=document.getElementById('li-'+k);if(el)el.value='';});
+  document.getElementById('patio-a45').value='';
+  renderPatioTileRow();renderAllDoors();renderAllStoeps();
+}
+function deleteJob(){
+  if(!curId)return;if(!confirm(`Delete "${jobs[curId]?.name||curId}"?`))return;
+  delete jobs[curId];saveJobs();curId=null;localStorage.removeItem('tjc_last');
+  rebuildJobSel();document.getElementById('jobSel').value='';clearAll();calcAll();
+}
+function duplicateJob(){
+  if(!curId)return;
+  const newId='j'+Date.now();
+  jobs[newId]=clone(jobs[curId]);
+  jobs[newId].name='Copy of '+(jobs[curId].name||curId);
+  jobs[newId].ts=Date.now();
+  saveJobs();rebuildJobSel();
+  document.getElementById('jobSel').value=newId;loadJob(newId);
+}
+function exportJobs(){
+  const date=new Date().toISOString().split('T')[0];
+  const blob=new Blob([JSON.stringify({jobs},null,2)],{type:'application/json'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);
+  a.download=`tileapp-backup-${date}.json`;a.click();URL.revokeObjectURL(a.href);
+}
+function importJobs(input){
+  const file=input.files[0];if(!file)return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    try{
+      const data=JSON.parse(e.target.result);
+      const imported=data.jobs||data;
+      if(typeof imported!=='object'||Array.isArray(imported))throw new Error();
+      const mode=confirm('Merge imported jobs with existing?\n\nOK = Merge (keep existing, add new)\nCancel = Replace all')
+        ?'merge':'replace';
+      if(mode==='replace'){
+        jobs=imported;
+      } else {
+        Object.keys(imported).forEach(id=>{ if(!jobs[id]) jobs[id]=imported[id]; });
+      }
+      saveJobs();rebuildJobSel();
+      const first=Object.keys(jobs)[0];
+      if(first){document.getElementById('jobSel').value=first;loadJob(first);}
+      alert(`Import complete (${mode}).`);
+    } catch(_){alert('Invalid backup file.');}
+    input.value='';
+  };
+  reader.readAsText(file);
+}
+
+// ═══════════════════════════════════════════════════════
+// CLOUD SYNC (Supabase)
+// ═══════════════════════════════════════════════════════
+const SB_TABLE='tile_app_data';
+const SB_KEY='jobs';
+function saveSbConfig(){
+  const u=document.getElementById('sb-url')?.value.trim();
+  const k=document.getElementById('sb-key')?.value.trim();
+  if(u)localStorage.setItem('tjc_sb_url',u);
+  if(k)localStorage.setItem('tjc_sb_key',k);
+}
+function sbHeaders(){
+  const k=localStorage.getItem('tjc_sb_key')||'';
+  return{'apikey':k,'Authorization':'Bearer '+k,'Content-Type':'application/json'};
+}
+function sbBaseUrl(){return(localStorage.getItem('tjc_sb_url')||'').replace(/\/$/,'');}
+function sbSetStatus(msg,ok){
+  const el=document.getElementById('sb-status');if(el)el.textContent=msg;
+  const dot=document.getElementById('sb-dot');
+  if(dot)dot.style.background=ok===true?'var(--green)':ok===false?'var(--red)':'var(--border)';
+}
+async function sbPush(){
+  const url=sbBaseUrl();if(!url||!localStorage.getItem('tjc_sb_key')){alert('Add Supabase URL and Anon Key in Settings.');return;}
+  sbSetStatus('Pushing…',null);
+  try{
+    const res=await fetch(`${url}/rest/v1/${SB_TABLE}`,{
+      method:'POST',
+      headers:{...sbHeaders(),'Prefer':'resolution=merge-duplicates'},
+      body:JSON.stringify({key:SB_KEY,value:jobs,updated_at:new Date().toISOString()})
+    });
+    if(!res.ok)throw new Error((await res.text()).slice(0,120));
+    const ts=new Date().toLocaleString();
+    localStorage.setItem('tjc_sb_ts',ts);
+    sbSetStatus('✓ Pushed '+ts,true);
+  }catch(e){sbSetStatus('✗ '+e.message,false);}
+}
+async function sbPull(){
+  const url=sbBaseUrl();if(!url||!localStorage.getItem('tjc_sb_key')){alert('Add Supabase URL and Anon Key in Settings.');return;}
+  if(!confirm('Pull from cloud?\n\nThis replaces all local jobs with cloud data.'))return;
+  sbSetStatus('Pulling…',null);
+  try{
+    const res=await fetch(`${url}/rest/v1/${SB_TABLE}?key=eq.${SB_KEY}&select=value`,{headers:sbHeaders()});
+    if(!res.ok)throw new Error((await res.text()).slice(0,120));
+    const rows=await res.json();
+    if(!rows.length){sbSetStatus('No cloud data yet — push first.',null);return;}
+    jobs=rows[0].value;
+    saveJobs();rebuildJobSel();
+    const last=localStorage.getItem('tjc_last');
+    if(last&&jobs[last]){document.getElementById('jobSel').value=last;loadJob(last);}
+    else{const first=Object.keys(jobs)[0];if(first){document.getElementById('jobSel').value=first;loadJob(first);}}
+    const ts=new Date().toLocaleString();
+    localStorage.setItem('tjc_sb_ts',ts);
+    sbSetStatus('✓ Pulled '+ts,true);
+  }catch(e){sbSetStatus('✗ '+e.message,false);}
+}
+function saveJobs(){localStorage.setItem('tjc_jobs',JSON.stringify(jobs));}
+function autoSave(){
+  if(!curId)return;
+  LIN_KEYS.forEach(k=>{const el=document.getElementById('li-'+k);if(el)lins[k]=pf(el.value);});
+  patioA45=document.getElementById('patio-a45').value;
+  jobs[curId]={...jobs[curId],
+    name:document.getElementById('f-name').value, date:document.getElementById('f-date').value,
+    client:document.getElementById('f-client').value, notes:document.getElementById('f-notes').value,
+    wastage:parseInt(document.getElementById('f-wastage').value)||0,
+    baths:clone(baths), panels:clone(panels), patioWP, patioFrankWP, lins:clone(lins),
+    patioTileType, patioA45, doors:clone(doors), stoeps:clone(stoeps),
+  };
+  const opt=document.getElementById('jobSel').querySelector(`option[value="${curId}"]`);
+  if(opt)opt.textContent=document.getElementById('f-name').value||curId;
+  saveJobs();updateAutoNotes();calcAll();
+}
+
+// ── Auto notes in Profiles ──
+function updateAutoNotes(){
+  const bathA12=totalAutoA12(), doorA12=totalDoorLen(), stA12=stoepAlum('a12');
+  const manA12=pf(document.getElementById('li-a12')?.value);
+  setNote('a12-note', [bathA12>0&&`${bathA12.toFixed(2)} m (walls)`, doorA12>0&&`${doorA12.toFixed(2)} m (doors)`, stA12>0&&`${stA12.toFixed(2)} m (stoep)`], manA12+bathA12+doorA12+stA12, 'm');
+
+  const pA45=pf(patioA45||document.getElementById('patio-a45')?.value), stA45=stoepAlum('a45');
+  const manA45=pf(document.getElementById('li-a45')?.value);
+  setNote('a45-note', [pA45>0&&`${pA45.toFixed(2)} m (patio)`, stA45>0&&`${stA45.toFixed(2)} m (stoep)`], manA45+pA45+stA45, 'm');
+
+  const stA10=stoepAlum('a10'), manA10=pf(document.getElementById('li-a10')?.value);
+  setNote('a10-note', [stA10>0&&`${stA10.toFixed(2)} m (stoep)`], manA10+stA10, 'm');
+
+  const dSdk=totalDoorLen(), manSdk=pf(document.getElementById('li-sdk')?.value);
+  setNote('sdk-note', [dSdk>0&&`+ ${dSdk.toFixed(2)} m (doors)`], manSdk+dSdk, 'm');
+
+  const dSkp=totalDoorLen(), manSkp=pf(document.getElementById('li-skp')?.value);
+  setNote('skp-note', [dSkp>0&&`+ ${dSkp.toFixed(2)} m (doors → Tile Skirting)`], manSkp, 'm');
+}
+function setNote(id, parts, total, unit){
+  const el=document.getElementById(id);if(!el)return;
+  const filtered=parts.filter(Boolean);
+  if(filtered.length>0){el.textContent=`+ ${filtered.join(' + ')} = ${total.toFixed(2)} ${unit} total`;el.style.display='block';}
+  else{el.textContent='';el.style.display='none';}
+}
+
+// ── Tile type pill renderer ──
+function pillsHTML(options, current, onchangeFn){
+  return options.map(o=>`<button class="tpill${current===o.v?' active':''}" onclick="${onchangeFn}('${o.v}')">${o.l}</button>`).join('');
+}
+
+// ═══════════════════════════════════════════════════════
+// PATIO TILE TYPE
+// ═══════════════════════════════════════════════════════
+function renderPatioTileRow(){
+  const el=document.getElementById('patio-tile-row');if(!el)return;
+  el.innerHTML=`<span class="tile-type-lbl">Tile type:</span>${pillsHTML(PATIO_TILES, patioTileType, 'setPatioTile')}`;
+}
+function setPatioTile(type){patioTileType=type;renderPatioTileRow();autoSave();}
+
+// ═══════════════════════════════════════════════════════
+// BATHROOM
+// ═══════════════════════════════════════════════════════
+const getBath=bid=>baths.find(b=>b.id===bid);
+function addBath(){
+  if(!curId){alert('Please select or create a job first.');return;}
+  baths.push({id:uid(),name:'Bathroom '+(baths.length+1),
+    wallTileType:'sw', focusWall:{l:'',h:'',wps:false,tileOverride:false,tileType:'sw',direct:false,m2:''},
+    sideWalls:[], sFloorType:'sf', sFloors:[], nFloorType:'nt', nFloors:[],
+    niches:0, benches:0, frankWP:false});
+  renderAllBaths();autoSave();
+  document.getElementById('bath-list').lastElementChild?.scrollIntoView({behavior:'smooth',block:'start'});
+}
+function removeBath(bid){if(!confirm('Remove this bathroom area?'))return;baths=baths.filter(b=>b.id!==bid);renderAllBaths();autoSave();}
+function renameBath(bid,val){const b=getBath(bid);if(b)b.name=val;autoSave();}
+
+// Wall tile type (all walls)
+function setBathWallType(bid,type){
+  const b=getBath(bid);if(!b)return;
+  b.wallTileType=type;
+  renderBathWallTypeRow(bid);renderBathFWOverride(bid);refreshAutoA12Panel(bid);autoSave();
+}
+function renderBathWallTypeRow(bid){
+  const el=document.getElementById('bwt-'+bid);if(!el)return;
+  const b=getBath(bid);if(!b)return;
+  el.innerHTML=`<span class="tile-type-lbl">Walls:</span>${pillsHTML(WALL_TILES, b.wallTileType||'sw', `setBathWallType.bind(null,'${bid}')`)}`;
+  // Fix onclick — use inline call
+  el.innerHTML=`<span class="tile-type-lbl">Walls:</span>`+WALL_TILES.map(o=>`<button class="tpill${(b.wallTileType||'sw')===o.v?' active':''}" onclick="setBathWallType('${bid}','${o.v}')">${o.l}</button>`).join('');
+}
+
+// Focus wall override
+function toggleFWOverride(bid){
+  const b=getBath(bid);if(!b)return;
+  const fw=b.focusWall||{};
+  fw.tileOverride=!fw.tileOverride;
+  if(fw.tileOverride) fw.tileType=fw.tileType||b.wallTileType||'sw';
+  b.focusWall=fw;
+  renderBathFWOverride(bid);refreshAutoA12Panel(bid);autoSave();
+}
+function setFWTileType(bid,type){
+  const b=getBath(bid);if(!b)return;
+  b.focusWall.tileType=type;
+  renderBathFWOverride(bid);autoSave();
+}
+function renderBathFWOverride(bid){
+  const el=document.getElementById('fw-override-'+bid);if(!el)return;
+  const b=getBath(bid);if(!b)return;
+  const fw=b.focusWall||{};
+  const eff=fwEffectiveType(b);
+  const togClass='fw-override-tog'+(fw.tileOverride?' on':'');
+  let html=`<div class="fw-override-bar">
+    <span class="fw-override-lbl">Focus wall different tile type${fw.tileOverride?' → '+WALL_TILES.find(o=>o.v===fw.tileType)?.l:''}</span>
+    <div class="${togClass}" onclick="toggleFWOverride('${bid}')"></div>
+  </div>`;
+  if(fw.tileOverride){
+    html+=`<div class="fw-override-pills tile-type-row">`+WALL_TILES.map(o=>`<button class="tpill sm${fw.tileType===o.v?' active':''}" onclick="setFWTileType('${bid}','${o.v}')">${o.l}</button>`).join('')+`</div>`;
+  }
+  el.innerHTML=html;
+}
+
+// Shower floor tile type
+function setBathSFType(bid,type){const b=getBath(bid);if(!b)return;b.sFloorType=type;renderBathSFTypeRow(bid);autoSave();}
+function renderBathSFTypeRow(bid){
+  const el=document.getElementById('bsft-'+bid);if(!el)return;
+  const b=getBath(bid);if(!b)return;
+  el.innerHTML=`<span class="tile-type-lbl">Tile:</span>`+SF_TILES.map(o=>`<button class="tpill${(b.sFloorType||'sf')===o.v?' active':''}" onclick="setBathSFType('${bid}','${o.v}')">${o.l}</button>`).join('');
+}
+
+// Normal floor tile type
+function setBathNFType(bid,type){const b=getBath(bid);if(!b)return;b.nFloorType=type;renderBathNFTypeRow(bid);autoSave();}
+function renderBathNFTypeRow(bid){
+  const el=document.getElementById('bnft-'+bid);if(!el)return;
+  const b=getBath(bid);if(!b)return;
+  el.innerHTML=`<span class="tile-type-lbl">Tile:</span>`+NF_TILES.map(o=>`<button class="tpill${(b.nFloorType||'nt')===o.v?' active':''}" onclick="setBathNFType('${bid}','${o.v}')">${o.l}</button>`).join('');
+}
+
+// Focus wall ops
+function updateFocus(bid,field,val){
+  const b=getBath(bid);if(!b)return;b.focusWall[field]=val;b.focusWall.direct=false;
+  const m2el=document.getElementById('fw-m2-'+bid);
+  if(m2el){const a=wallArea(b.focusWall);m2el.value=a>0?a.toFixed(2):'';m2el.classList.remove('direct');}
+  document.getElementById('fw-l-'+bid)?.classList.remove('lw-dim');
+  document.getElementById('fw-h-'+bid)?.classList.remove('lw-dim');
+  refreshBathTotals(bid);autoSave();
+}
+function toggleFocusWP(bid){
+  const b=getBath(bid);if(!b)return;b.focusWall.wps=!b.focusWall.wps;
+  const btn=document.getElementById('fw-wp-'+bid);
+  if(btn){btn.classList.toggle('on',b.focusWall.wps);btn.textContent=b.focusWall.wps?'WP✓':'WP';}
+  refreshBathTotals(bid);autoSave();
+}
+
+// Side wall ops
+function addSideWall(bid){
+  const b=getBath(bid);if(!b)return;
+  if((b.sideWalls||[]).length>=2){alert('Maximum 2 side walls.');return;}
+  b.sideWalls.push({id:uid(),l:'',h:'',wps:false,direct:false,m2:''});
+  renderSideWalls(bid);refreshBathTotals(bid);autoSave();
+}
+function removeSideWall(bid,sid){
+  const b=getBath(bid);if(!b)return;
+  b.sideWalls=b.sideWalls.filter(w=>w.id!==sid);
+  renderSideWalls(bid);refreshBathTotals(bid);autoSave();
+}
+function updateSideWall(bid,sid,field,val){
+  const b=getBath(bid);if(!b)return;
+  const w=(b.sideWalls||[]).find(w=>w.id===sid);if(!w)return;
+  w[field]=val;w.direct=false;
+  const m2el=document.getElementById('sw-m2-'+sid);
+  if(m2el){const a=wallArea(w);m2el.value=a>0?a.toFixed(2):'';m2el.classList.remove('direct');}
+  document.getElementById('sw-l-'+sid)?.classList.remove('lw-dim');
+  document.getElementById('sw-h-'+sid)?.classList.remove('lw-dim');
+  refreshBathTotals(bid);autoSave();
+}
+function toggleSideWP(bid,sid){
+  const b=getBath(bid);if(!b)return;
+  const w=(b.sideWalls||[]).find(w=>w.id===sid);if(!w)return;
+  w.wps=!w.wps;
+  const btn=document.getElementById('sw-wp-'+sid);
+  if(btn){btn.classList.toggle('on',w.wps);btn.textContent=w.wps?'WP✓':'WP';}
+  refreshBathTotals(bid);autoSave();
+}
+function renderSideWalls(bid){
+  const b=getBath(bid);if(!b)return;
+  const box=document.getElementById('sw-box-'+bid);if(!box)return;
+  box.innerHTML='';
+  (b.sideWalls||[]).forEach(w=>{
+    const a=wallArea(w);
+    const row=document.createElement('div');row.className='wall-row';
+    row.innerHTML=`
+      <input id="sw-l-${w.id}" type="number" placeholder="0.00" min="0" step="0.01" value="${w.l||''}" class="${w.direct?'lw-dim':''}" oninput="updateSideWall('${bid}','${w.id}','l',this.value)" style="border-left:3px solid var(--blue)">
+      <input id="sw-h-${w.id}" type="number" placeholder="0.00" min="0" step="0.01" value="${w.h||''}" class="${w.direct?'lw-dim':''}" oninput="updateSideWall('${bid}','${w.id}','h',this.value)">
+      <input id="sw-m2-${w.id}" class="m2-inp${w.direct?' direct':''}" type="number" min="0" step="0.01" placeholder="m²" value="${w.direct?pf(w.m2||0)>0?pf(w.m2).toFixed(2):'':a>0?a.toFixed(2):''}" oninput="setDirectSW('${bid}','${w.id}',this.value)">
+      <button class="wp-btn ${w.wps?'on':''}" id="sw-wp-${w.id}" onclick="toggleSideWP('${bid}','${w.id}')">${w.wps?'WP✓':'WP'}</button>
+      <button class="rmv" onclick="removeSideWall('${bid}','${w.id}')">×</button>`;
+    box.appendChild(row);
+  });
+  if((b.sideWalls||[]).length<2){
+    const n=(b.sideWalls||[]).length===0?'first':'second';
+    const btn=document.createElement('button');btn.className='add-side-btn';
+    btn.innerHTML=`＋ Add ${n} side wall`;btn.onclick=()=>addSideWall(bid);
+    box.appendChild(btn);
+  }
+  refreshAutoA12Panel(bid);
+}
+
+// Shower floor ops
+function addSFloor(bid){const b=getBath(bid);if(!b)return;b.sFloors.push({id:uid(),l:'',w:'',wps:true,direct:false,m2:''});renderSFloors(bid);autoSave();}
+function removeSFloor(bid,pid){const b=getBath(bid);if(!b)return;b.sFloors=b.sFloors.filter(r=>r.id!==pid);renderSFloors(bid);autoSave();}
+function updateSFloor(bid,pid,field,val){
+  const b=getBath(bid);if(!b)return;const r=b.sFloors.find(r=>r.id===pid);if(r){r[field]=val;r.direct=false;}
+  const m2el=document.getElementById('sf-m2-'+pid);
+  if(m2el&&r){const a=pf(r.l)*pf(r.w);m2el.value=a>0?a.toFixed(2):'';m2el.classList.remove('direct');}
+  document.getElementById('sf-l-'+pid)?.classList.remove('lw-dim');
+  document.getElementById('sf-w-'+pid)?.classList.remove('lw-dim');
+  refreshBathTotals(bid);autoSave();
+}
+function toggleSFloorWP(bid,pid){
+  const b=getBath(bid);if(!b)return;const r=b.sFloors.find(r=>r.id===pid);if(!r)return;
+  r.wps=!r.wps;const btn=document.getElementById('sfwp-'+pid);
+  if(btn){btn.classList.toggle('on',r.wps);btn.textContent=r.wps?'WP✓':'WP';}
+  refreshBathTotals(bid);autoSave();
+}
+function renderSFloors(bid){
+  const b=getBath(bid);if(!b)return;
+  const box=document.getElementById('sf-box-'+bid);if(!box)return;
+  if(!b.sFloors.length){box.innerHTML='<div class="no-item">No panels — tap + to add</div>';}
+  else box.innerHTML=b.sFloors.map(r=>{
+    const a=pf(r.l)*pf(r.w);const disp=r.direct?pf(r.m2||0):a;
+    return `<div class="sf-row"><input id="sf-l-${r.id}" type="number" placeholder="0.00" min="0" step="0.01" value="${r.l||''}" class="${r.direct?'lw-dim':''}" oninput="updateSFloor('${bid}','${r.id}','l',this.value)"><input id="sf-w-${r.id}" type="number" placeholder="0.00" min="0" step="0.01" value="${r.w||''}" class="${r.direct?'lw-dim':''}" oninput="updateSFloor('${bid}','${r.id}','w',this.value)"><input id="sf-m2-${r.id}" class="m2-inp${r.direct?' direct':''}" type="number" min="0" step="0.01" placeholder="m²" value="${disp>0?disp.toFixed(2):''}" oninput="setDirectSF('${bid}','${r.id}',this.value)"><button class="wp-btn ${r.wps?'on':''}" id="sfwp-${r.id}" onclick="toggleSFloorWP('${bid}','${r.id}')">${r.wps?'WP✓':'WP'}</button><button class="rmv" onclick="removeSFloor('${bid}','${r.id}')">×</button></div>`;
+  }).join('');
+  refreshBathTotals(bid);
+}
+
+// Normal floor ops
+function addNFloor(bid){const b=getBath(bid);if(!b)return;b.nFloors.push({id:uid(),l:'',w:'',direct:false,m2:''});renderNFloors(bid);autoSave();}
+function removeNFloor(bid,pid){const b=getBath(bid);if(!b)return;b.nFloors=b.nFloors.filter(r=>r.id!==pid);renderNFloors(bid);autoSave();}
+function updateNFloor(bid,pid,field,val){
+  const b=getBath(bid);if(!b)return;const r=b.nFloors.find(r=>r.id===pid);if(r){r[field]=val;r.direct=false;}
+  const m2el=document.getElementById('nf-m2-'+pid);
+  if(m2el&&r){const a=pf(r.l)*pf(r.w);m2el.value=a>0?a.toFixed(2):'';m2el.classList.remove('direct');}
+  document.getElementById('nf-l-'+pid)?.classList.remove('lw-dim');
+  document.getElementById('nf-w-'+pid)?.classList.remove('lw-dim');
+  refreshBathTotals(bid);autoSave();
+}
+function renderNFloors(bid){
+  const b=getBath(bid);if(!b)return;
+  const box=document.getElementById('nf-box-'+bid);if(!box)return;
+  if(!b.nFloors.length){box.innerHTML='<div class="no-item">No panels — tap + to add</div>';}
+  else box.innerHTML=b.nFloors.map(r=>{
+    const a=pf(r.l)*pf(r.w);const disp=r.direct?pf(r.m2||0):a;
+    return `<div class="panel-row-nowp"><input id="nf-l-${r.id}" type="number" placeholder="0.00" min="0" step="0.01" value="${r.l||''}" class="${r.direct?'lw-dim':''}" oninput="updateNFloor('${bid}','${r.id}','l',this.value)"><input id="nf-w-${r.id}" type="number" placeholder="0.00" min="0" step="0.01" value="${r.w||''}" class="${r.direct?'lw-dim':''}" oninput="updateNFloor('${bid}','${r.id}','w',this.value)"><input id="nf-m2-${r.id}" class="m2-inp${r.direct?' direct':''}" type="number" min="0" step="0.01" placeholder="m²" value="${disp>0?disp.toFixed(2):''}" oninput="setDirectNF('${bid}','${r.id}',this.value)"><button class="rmv" onclick="removeNFloor('${bid}','${r.id}')">×</button></div>`;
+  }).join('');
+  refreshBathTotals(bid);
+}
+
+function adjBath(bid,key,d){
+  const b=getBath(bid);if(!b)return;b[key]=Math.max(0,(b[key]||0)+d);
+  const el=document.getElementById('bcnt-'+bid+'-'+key);if(el)el.textContent=b[key];autoSave();
+}
+
+function refreshBathTotals(bid){
+  const b=getBath(bid);if(!b)return;
+  const wa=bathWallArea(b),wpa=bathWallWPArea(b);
+  const sfa=panelArea(b.sFloors),sfwpa=panelWPArea(b.sFloors),nfa=panelArea(b.nFloors);
+  const wTot=document.getElementById('wall-tot-'+bid),wWP=document.getElementById('wall-wp-'+bid);
+  const sfTot=document.getElementById('sf-tot-'+bid),sfWP=document.getElementById('sf-wp-'+bid);
+  const nfTot=document.getElementById('nf-tot-'+bid);
+  if(wTot)wTot.innerHTML=`Walls: <strong>${wa.toFixed(2)} m²</strong>`;
+  if(wWP){wWP.innerHTML=`<strong>${wpa.toFixed(2)} m²</strong> waterproofed`;wWP.style.display=wpa>0?'block':'none';}
+  if(sfTot)sfTot.innerHTML=`Shower Floor: <strong>${sfa.toFixed(2)} m²</strong>`;
+  if(sfWP){sfWP.innerHTML=`<strong>${sfwpa.toFixed(2)} m²</strong> waterproofed`;sfWP.style.display=sfwpa>0?'block':'none';}
+  if(nfTot)nfTot.innerHTML=`Normal Floor: <strong>${nfa.toFixed(2)} m²</strong>`;
+  refreshAutoA12Panel(bid);
+}
+function refreshAutoA12Panel(bid){
+  const b=getBath(bid);if(!b)return;
+  const fw=b.focusWall||{},sw=b.sideWalls||[];
+  const tops=pf(fw.l)+sw.reduce((s,w)=>s+pf(w.l),0);
+  const sideH=sw.reduce((s,w)=>s+pf(w.h),0);
+  const extH=sw.length===0?pf(fw.h)*2:sw.length===1?pf(fw.h):0;
+  const total=tops+sideH+extH;
+  const el=document.getElementById('auto-a12-'+bid);if(!el)return;
+  const parts=[];
+  if(tops>0) parts.push(`${tops.toFixed(2)} m tops`);
+  if(sideH>0) parts.push(`${sideH.toFixed(2)} m side heights`);
+  if(extH>0) parts.push(`${extH.toFixed(2)} m open edge${sw.length===0?' ×2':''}`);
+  el.innerHTML=`<div style="font-size:13px;font-weight:700;color:var(--purple);font-family:'DM Mono',monospace">${total.toFixed(2)} m</div><div style="font-size:10px;color:var(--muted);margin-top:2px">${parts.join(' + ')||'Enter wall dimensions above'}</div>`;
+  updateAutoNotes();
+}
+
+function renderAllBaths(){
+  const list=document.getElementById('bath-list');list.innerHTML='';
+  baths.forEach((b,i)=>{
+    const card=document.createElement('div');card.className='bath-card';card.id='bcard-'+b.id;
+    card.innerHTML=buildBathHTML(b,i+1);list.appendChild(card);
+    renderBathWallTypeRow(b.id);renderBathFWOverride(b.id);
+    renderSideWalls(b.id);renderSFloors(b.id);renderNFloors(b.id);
+    renderBathSFTypeRow(b.id);renderBathNFTypeRow(b.id);
+    refreshBathTotals(b.id);
+  });
+}
+
+function buildBathHTML(b,idx){
+  const fw=b.focusWall||{};const fwA=wallArea(fw);
+  return `
+    <div class="bath-card-hdr">
+      <div class="bath-num">${idx}</div>
+      <input class="bath-name-input" type="text" value="${b.name}" placeholder="Bathroom name" oninput="renameBath('${b.id}',this.value)">
+      <button class="bath-collapse-btn" id="bcoll-${b.id}" onclick="toggleBathCard('${b.id}')" title="Collapse">⌄</button>
+      <button class="bath-del" onclick="removeBath('${b.id}')">×</button>
+    </div>
+    <div class="bath-body" id="bbody-${b.id}">
+
+    <!-- WALLS -->
+    <div class="bath-sub-hdr">Walls<span class="sub-note">tap WP to waterproof a panel</span></div>
+    <div class="tile-type-row" id="bwt-${b.id}"></div>
+
+    <div style="font-size:10px;font-weight:700;color:var(--blue);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Focus Wall</div>
+    <div id="fw-override-${b.id}"></div>
+    <div class="wall-labels-fw"><span>Length (m)</span><span>Height (m)</span><span>m²</span><span style="color:var(--teal)">WP</span></div>
+    <div class="wall-row-fw">
+      <input id="fw-l-${b.id}" type="number" placeholder="0.00" min="0" step="0.01" value="${fw.l||''}" class="${fw.direct?'lw-dim':''}" oninput="updateFocus('${b.id}','l',this.value)" style="border-left:3px solid var(--primary)">
+      <input id="fw-h-${b.id}" type="number" placeholder="0.00" min="0" step="0.01" value="${fw.h||''}" class="${fw.direct?'lw-dim':''}" oninput="updateFocus('${b.id}','h',this.value)">
+      <input id="fw-m2-${b.id}" class="m2-inp${fw.direct?' direct':''}" type="number" min="0" step="0.01" placeholder="m²" value="${fw.direct?pf(fw.m2||0)>0?pf(fw.m2).toFixed(2):'':fwA>0?fwA.toFixed(2):''}" oninput="setDirectFW('${b.id}',this.value)">
+      <button class="wp-btn ${fw.wps?'on':''}" id="fw-wp-${b.id}" onclick="toggleFocusWP('${b.id}')">${fw.wps?'WP✓':'WP'}</button>
+    </div>
+
+    <div style="font-size:10px;font-weight:700;color:var(--blue);text-transform:uppercase;letter-spacing:.5px;margin:8px 0 4px">Side Walls</div>
+    <div class="wall-labels"><span>Length (m)</span><span>Height (m)</span><span>m²</span><span style="color:var(--teal)">WP</span><span></span></div>
+    <div id="sw-box-${b.id}"></div>
+    <div class="sec-total" id="wall-tot-${b.id}">Walls: <strong>0.00 m²</strong></div>
+    <div class="wp-note" id="wall-wp-${b.id}" style="display:none"></div>
+
+    <div class="dvd"></div>
+
+    <!-- SHOWER FLOOR -->
+    <div class="bath-sub-hdr">Shower Floor<span class="sub-note" style="color:var(--teal)">WP per panel</span><button class="sub-btn" onclick="addSFloor('${b.id}')">+ Panel</button></div>
+    <div class="tile-type-row" id="bsft-${b.id}"></div>
+    <div class="sf-labels"><span>Length (m)</span><span>Width (m)</span><span>m²</span><span style="color:var(--teal)">WP</span><span></span></div>
+    <div id="sf-box-${b.id}"></div>
+    <div class="sec-total" id="sf-tot-${b.id}">Shower Floor: <strong>0.00 m²</strong></div>
+    <div class="wp-note" id="sf-wp-${b.id}" style="display:none"></div>
+
+    <div class="dvd"></div>
+
+    <!-- NORMAL FLOOR -->
+    <div class="bath-sub-hdr">Normal Floor<span class="sub-note">no waterproofing</span><button class="sub-btn" onclick="addNFloor('${b.id}')">+ Panel</button></div>
+    <div class="tile-type-row" id="bnft-${b.id}"></div>
+    <div class="panel-labels-nowp"><span>Length (m)</span><span>Width (m)</span><span>m²</span><span></span></div>
+    <div id="nf-box-${b.id}"></div>
+    <div class="sec-total" id="nf-tot-${b.id}">Normal Floor: <strong>0.00 m²</strong></div>
+
+    <div class="dvd"></div>
+
+    <!-- AUTO A12 -->
+    <div class="auto-panel">
+      <div class="auto-panel-title">📐 Aluminium 12mm — Auto</div>
+      <div id="auto-a12-${b.id}"><div style="font-size:12px;color:var(--muted)">Enter wall dimensions above</div></div>
+      <div class="auto-note">Top of every wall + side wall heights + focus wall height when fewer than 2 sides (open edges). Auto-added to Aluminium 12mm total.</div>
+    </div>
+
+    <div class="dvd"></div>
+
+    <!-- TILER WP -->
+    <div class="bath-sub-hdr">Tiler — Waterproofing</div>
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)">
+      <div style="font-size:13px;font-weight:500;flex:1">Tiler did WP here <span style="font-size:11px;color:var(--muted)">(R400 flat fee)</span></div>
+      <button class="wp-btn ${b.frankWP?'on':''}" id="bath-fwp-${b.id}" onclick="toggleBathFrankWP('${b.id}')">${b.frankWP?'WP✓':'WP'}</button>
+    </div>
+
+    <div class="dvd"></div>
+
+    <!-- FEATURE ITEMS -->
+    <div class="bath-sub-hdr">Feature Items</div>
+    <div class="cnt-row"><div class="cnt-label">Niches</div><div class="cnt-ctrl"><button class="cnt-btn" onclick="adjBath('${b.id}','niches',-1)">−</button><span class="cnt-val" id="bcnt-${b.id}-niches">${b.niches||0}</span><button class="cnt-btn" onclick="adjBath('${b.id}','niches',1)">+</button></div></div>
+    <div class="cnt-row"><div class="cnt-label">Benches</div><div class="cnt-ctrl"><button class="cnt-btn" onclick="adjBath('${b.id}','benches',-1)">−</button><span class="cnt-val" id="bcnt-${b.id}-benches">${b.benches||0}</span><button class="cnt-btn" onclick="adjBath('${b.id}','benches',1)">+</button></div></div>
+
+    </div>`; /* end bath-body */
+}
+
+// ═══════════════════════════════════════════════════════
+// SLIDING DOORS
+// ═══════════════════════════════════════════════════════
+function addDoor(){if(!curId){alert('Please select or create a job first.');return;}doors.push({id:uid(),desc:'',l:''});renderAllDoors();autoSave();}
+function removeDoor(did){doors=doors.filter(d=>d.id!==did);renderAllDoors();autoSave();}
+function updateDoor(did,field,val){const d=doors.find(d=>d.id===did);if(d)d[field]=val;refreshDoorUI();autoSave();}
+function refreshDoorUI(){
+  const tot=totalDoorLen(),has=doors.length>0;
+  const totEl=document.getElementById('door-tot');const empEl=document.getElementById('door-empty');
+  const feedEl=document.getElementById('door-feeds');const labEl=document.getElementById('door-labels');
+  if(totEl){totEl.innerHTML=`Total: <strong>${tot.toFixed(2)} m</strong>`;totEl.style.display=has?'block':'none';}
+  if(empEl)empEl.style.display=has?'none':'block';
+  if(feedEl)feedEl.style.display=has?'flex':'none';
+  if(labEl)labEl.style.display=has?'block':'none';
+}
+function renderAllDoors(){
+  const list=document.getElementById('door-list');if(!list)return;list.innerHTML='';
+  doors.forEach(d=>{
+    const row=document.createElement('div');row.className='door-row';
+    row.innerHTML=`<input type="text" placeholder="e.g. Lounge door" value="${d.desc||''}" oninput="updateDoor('${d.id}','desc',this.value)"><input type="number" placeholder="0.00" min="0" step="0.01" value="${d.l||''}" oninput="updateDoor('${d.id}','l',this.value)"><button class="rmv" onclick="removeDoor('${d.id}')">×</button>`;
+    list.appendChild(row);
+  });
+  refreshDoorUI();
+}
+
+// ═══════════════════════════════════════════════════════
+// FRONT STOEP
+// ═══════════════════════════════════════════════════════
+function addStoep(){if(!curId){alert('Please select or create a job first.');return;}stoeps.push({id:uid(),name:'Front Stoep '+(stoeps.length+1),panels:[],tileType:'nt',alumType:'a45',alumL:''});renderAllStoeps();autoSave();document.getElementById('stoep-list').lastElementChild?.scrollIntoView({behavior:'smooth',block:'start'});}
+function removeStoep(sid){if(!confirm('Remove this stoep area?'))return;stoeps=stoeps.filter(s=>s.id!==sid);renderAllStoeps();autoSave();}
+function renameStoep(sid,val){const s=stoeps.find(s=>s.id===sid);if(s)s.name=val;autoSave();}
+function addStoepPanel(sid){const s=stoeps.find(s=>s.id===sid);if(!s)return;s.panels.push({id:uid(),l:'',w:'',direct:false,m2:''});renderStoepPanels(sid);autoSave();}
+function removeStoepPanel(sid,pid){const s=stoeps.find(s=>s.id===sid);if(!s)return;s.panels=s.panels.filter(p=>p.id!==pid);renderStoepPanels(sid);autoSave();}
+function updateStoepPanel(sid,pid,field,val){
+  const s=stoeps.find(s=>s.id===sid);if(!s)return;const p=s.panels.find(p=>p.id===pid);if(p){p[field]=val;p.direct=false;}
+  const m2el=document.getElementById('st-m2-'+pid);
+  if(m2el&&p){const a=pf(p.l)*pf(p.w);m2el.value=a>0?a.toFixed(2):'';m2el.classList.remove('direct');}
+  document.getElementById('st-l-'+pid)?.classList.remove('lw-dim');
+  document.getElementById('st-w-'+pid)?.classList.remove('lw-dim');
+  updateStoepTotal(sid);autoSave();
+}
+function updateStoepField(sid,field,val){
+  const s=stoeps.find(s=>s.id===sid);if(!s)return;s[field]=val;
+  if(field==='tileType') renderStoepTileRow(sid);
+  if(field==='alumType'){
+    const lenWrap=document.getElementById('stoep-alum-len-'+sid);
+    if(lenWrap)lenWrap.style.display=val==='none'?'none':'flex';
+    const noteEl=document.getElementById('stoep-alum-note-'+sid);
+    if(noteEl){noteEl.style.display=val==='none'?'none':'block';noteEl.textContent=`Added to ${ALUM_OPTIONS.find(o=>o.value===val)?.label||''} total`;}
+  }
+  autoSave();updateAutoNotes();
+}
+function renderStoepTileRow(sid){
+  const el=document.getElementById('stoep-tile-row-'+sid);if(!el)return;
+  const s=stoeps.find(s=>s.id===sid);if(!s)return;
+  el.innerHTML=`<span class="tile-type-lbl">Tile:</span>`+STOEP_TILES.map(o=>`<button class="tpill${(s.tileType||'nt')===o.v?' active':''}" onclick="updateStoepField('${sid}','tileType','${o.v}')">${o.l}</button>`).join('');
+}
+function updateStoepTotal(sid){
+  const s=stoeps.find(s=>s.id===sid);if(!s)return;
+  const el=document.getElementById('stoep-tot-'+sid);
+  if(el)el.innerHTML=`Total: <strong>${panelArea(s.panels).toFixed(2)} m²</strong>`;
+}
+function renderStoepPanels(sid){
+  const s=stoeps.find(s=>s.id===sid);if(!s)return;
+  const box=document.getElementById('stoep-panels-'+sid);if(!box)return;
+  if(!s.panels.length){box.innerHTML='<div class="no-item">No areas — tap + Area to add</div>';}
+  else box.innerHTML=s.panels.map(p=>{
+    const a=pf(p.l)*pf(p.w);const disp=p.direct?pf(p.m2||0):a;
+    return `<div class="panel-row-nowp"><input id="st-l-${p.id}" type="number" placeholder="0.00" min="0" step="0.01" value="${p.l||''}" class="${p.direct?'lw-dim':''}" oninput="updateStoepPanel('${sid}','${p.id}','l',this.value)"><input id="st-w-${p.id}" type="number" placeholder="0.00" min="0" step="0.01" value="${p.w||''}" class="${p.direct?'lw-dim':''}" oninput="updateStoepPanel('${sid}','${p.id}','w',this.value)"><input id="st-m2-${p.id}" class="m2-inp${p.direct?' direct':''}" type="number" min="0" step="0.01" placeholder="m²" value="${disp>0?disp.toFixed(2):''}" oninput="setDirectStoep('${sid}','${p.id}',this.value)"><button class="rmv" onclick="removeStoepPanel('${sid}','${p.id}')">×</button></div>`;
+  }).join('');
+  updateStoepTotal(sid);
+}
+function renderAllStoeps(){
+  const list=document.getElementById('stoep-list');if(!list)return;list.innerHTML='';
+  stoeps.forEach((s,i)=>{
+    const card=document.createElement('div');card.className='stoep-card';card.id='stcard-'+s.id;
+    const alumOpts=ALUM_OPTIONS.map(o=>`<option value="${o.value}" ${s.alumType===o.value?'selected':''}>${o.label}</option>`).join('');
+    card.innerHTML=`
+      <div class="stoep-card-hdr">
+        <div class="stoep-num">${i+1}</div>
+        <input class="stoep-name-input" type="text" value="${s.name}" placeholder="Stoep name" oninput="renameStoep('${s.id}',this.value)">
+        <button class="bath-del" onclick="removeStoep('${s.id}')">×</button>
+      </div>
+      <div class="bath-sub-hdr">Area<button class="sub-btn" onclick="addStoepPanel('${s.id}')">+ Area</button></div>
+      <div class="tile-type-row" id="stoep-tile-row-${s.id}"></div>
+      <div class="panel-labels-nowp"><span>Length (m)</span><span>Width (m)</span><span>m²</span><span></span></div>
+      <div id="stoep-panels-${s.id}"></div>
+      <div class="sec-total" id="stoep-tot-${s.id}">Total: <strong>0.00 m²</strong></div>
+      <div class="alum-row">
+        <div class="alum-label">Aluminium edging</div>
+        <select class="alum-select" onchange="updateStoepField('${s.id}','alumType',this.value)">${alumOpts}</select>
+      </div>
+      <div id="stoep-alum-len-${s.id}" style="display:${s.alumType==='none'?'none':'flex'};align-items:center;gap:8px;padding:6px 0 2px;justify-content:flex-end">
+        <span style="font-size:12px;font-weight:600;color:var(--purple);flex:1">Length</span>
+        <input class="alum-input" type="number" placeholder="0.0" min="0" step="0.1" value="${s.alumL||''}" oninput="updateStoepField('${s.id}','alumL',this.value)">
+        <span class="alum-unit">m</span>
+      </div>
+      <div style="font-size:10px;color:var(--purple);text-align:right;margin-top:3px;display:${s.alumType==='none'?'none':'block'}" id="stoep-alum-note-${s.id}">Added to ${ALUM_OPTIONS.find(o=>o.value===s.alumType)?.label||''} total</div>`;
+    list.appendChild(card);
+    renderStoepTileRow(s.id);renderStoepPanels(s.id);
+  });
+}
+
+// ═══════════════════════════════════════════════════════
+// FLOOR PANELS (outside bathroom)
+// ═══════════════════════════════════════════════════════
+function addFloorPanel(sec){if(!curId){alert('Please select or create a job first.');return;}if(!panels[sec])panels[sec]=[];panels[sec].push({id:uid(),l:'',w:'',direct:false,m2:''});renderFloorPanels(sec);autoSave();}
+function rmFloorPanel(sec,id){panels[sec]=(panels[sec]||[]).filter(r=>r.id!==id);renderFloorPanels(sec);autoSave();}
+function upFloorPanel(sec,id,field,val){
+  const r=(panels[sec]||[]).find(r=>r.id===id);if(r){r[field]=val;r.direct=false;}
+  const m2el=document.getElementById('fp-m2-'+id);
+  if(m2el&&r){const a=pf(r.l)*pf(r.w);m2el.value=a>0?a.toFixed(2):'';m2el.classList.remove('direct');}
+  document.getElementById('fp-l-'+id)?.classList.remove('lw-dim');
+  document.getElementById('fp-w-'+id)?.classList.remove('lw-dim');
+  const el=document.getElementById('tot-'+sec);if(el)el.innerHTML=`Total: <strong>${floorArea(sec).toFixed(2)} m²</strong>`;
+  autoSave();
+}
+function renderFloorPanels(sec){
+  const box=document.getElementById('panels-'+sec);if(!box)return;box.innerHTML='';
+  (panels[sec]||[]).forEach(r=>{
+    const a=pf(r.l)*pf(r.w);const disp=r.direct?pf(r.m2||0):a;const d=document.createElement('div');d.className='panel-row-nowp';d.id='fp-'+r.id;
+    d.innerHTML=`<input id="fp-l-${r.id}" type="number" placeholder="0.00" min="0" step="0.01" value="${r.l||''}" class="${r.direct?'lw-dim':''}" oninput="upFloorPanel('${sec}','${r.id}','l',this.value)"><input id="fp-w-${r.id}" type="number" placeholder="0.00" min="0" step="0.01" value="${r.w||''}" class="${r.direct?'lw-dim':''}" oninput="upFloorPanel('${sec}','${r.id}','w',this.value)"><input id="fp-m2-${r.id}" class="m2-inp${r.direct?' direct':''}" type="number" min="0" step="0.01" placeholder="m²" value="${disp>0?disp.toFixed(2):''}" oninput="setDirectFP('${sec}','${r.id}',this.value)"><button class="rmv" onclick="rmFloorPanel('${sec}','${r.id}')">×</button>`;
+    box.appendChild(d);
+  });
+  const el=document.getElementById('tot-'+sec);if(el)el.innerHTML=`Total: <strong>${floorArea(sec).toFixed(2)} m²</strong>`;
+}
+function togglePatioWP(){if(!curId)return;patioWP=!patioWP;document.getElementById('tog-wpp').classList.toggle('on',patioWP);autoSave();}
+function togglePatioFrankWP(){if(!curId)return;patioFrankWP=!patioFrankWP;document.getElementById('tog-patio-frank-wp').classList.toggle('on',patioFrankWP);autoSave();}
+function toggleBathFrankWP(bid){const b=getBath(bid);if(!b)return;b.frankWP=!b.frankWP;const el=document.getElementById('bath-fwp-'+bid);if(el){el.classList.toggle('on',b.frankWP);el.textContent=b.frankWP?'WP✓':'WP';}autoSave();}
+
+// ═══════════════════════════════════════════════════════
+// DIRECT m² ENTRY
+// ═══════════════════════════════════════════════════════
+function _applyDirect(r,val,m2id,lid,wid){
+  r.direct=pf(val)>0;r.m2=val;
+  document.getElementById(m2id)?.classList.toggle('direct',r.direct);
+  document.getElementById(lid)?.classList.toggle('lw-dim',r.direct);
+  document.getElementById(wid)?.classList.toggle('lw-dim',r.direct);
+}
+function setDirectFW(bid,val){
+  const b=getBath(bid);if(!b)return;
+  _applyDirect(b.focusWall,val,'fw-m2-'+bid,'fw-l-'+bid,'fw-h-'+bid);
+  refreshBathTotals(bid);autoSave();
+}
+function setDirectSW(bid,wid,val){
+  const b=getBath(bid);if(!b)return;const w=(b.sideWalls||[]).find(w=>w.id===wid);if(!w)return;
+  _applyDirect(w,val,'sw-m2-'+wid,'sw-l-'+wid,'sw-h-'+wid);
+  refreshBathTotals(bid);autoSave();
+}
+function setDirectSF(bid,pid,val){
+  const b=getBath(bid);if(!b)return;const r=(b.sFloors||[]).find(r=>r.id===pid);if(!r)return;
+  _applyDirect(r,val,'sf-m2-'+pid,'sf-l-'+pid,'sf-w-'+pid);
+  refreshBathTotals(bid);autoSave();
+}
+function setDirectNF(bid,pid,val){
+  const b=getBath(bid);if(!b)return;const r=(b.nFloors||[]).find(r=>r.id===pid);if(!r)return;
+  _applyDirect(r,val,'nf-m2-'+pid,'nf-l-'+pid,'nf-w-'+pid);
+  refreshBathTotals(bid);autoSave();
+}
+function setDirectFP(sec,id,val){
+  const r=(panels[sec]||[]).find(r=>r.id===id);if(!r)return;
+  _applyDirect(r,val,'fp-m2-'+id,'fp-l-'+id,'fp-w-'+id);
+  const el=document.getElementById('tot-'+sec);if(el)el.innerHTML=`Total: <strong>${floorArea(sec).toFixed(2)} m²</strong>`;
+  autoSave();
+}
+function setDirectStoep(sid,pid,val){
+  const s=stoeps.find(s=>s.id===sid);if(!s)return;const r=(s.panels||[]).find(p=>p.id===pid);if(!r)return;
+  _applyDirect(r,val,'st-m2-'+pid,'st-l-'+pid,'st-w-'+pid);
+  updateStoepTotal(sid);autoSave();
+}
+
+// ═══════════════════════════════════════════════════════
+// COLLAPSIBLE SECTIONS
+// ═══════════════════════════════════════════════════════
+const SEC_IDS=['bathrooms','floors','patio','doors','stoep','profiles'];
+function toggleSec(id){
+  const body=document.getElementById('sb-'+id);
+  const chev=document.getElementById('chev-'+id);
+  if(!body)return;
+  const nowCollapsed=!body.classList.contains('collapsed');
+  body.classList.toggle('collapsed',nowCollapsed);
+  if(chev)chev.classList.toggle('collapsed',nowCollapsed);
+  let secs={};try{secs=JSON.parse(localStorage.getItem('tjc_secs')||'{}');}catch(e){}
+  secs[id]=!nowCollapsed;
+  localStorage.setItem('tjc_secs',JSON.stringify(secs));
+}
+function loadSecState(){
+  let secs={};try{secs=JSON.parse(localStorage.getItem('tjc_secs')||'{}');}catch(e){}
+  SEC_IDS.forEach(id=>{
+    if(secs[id]===false){
+      const body=document.getElementById('sb-'+id);
+      const chev=document.getElementById('chev-'+id);
+      if(body)body.classList.add('collapsed');
+      if(chev)chev.classList.add('collapsed');
+    }
+  });
+}
+function toggleBathCard(bid){
+  const body=document.getElementById('bbody-'+bid);
+  const btn=document.getElementById('bcoll-'+bid);
+  if(!body)return;
+  const nowCollapsed=!body.classList.contains('collapsed');
+  body.classList.toggle('collapsed',nowCollapsed);
+  if(btn)btn.classList.toggle('collapsed',nowCollapsed);
+}
+
+// ═══════════════════════════════════════════════════════
+// CALCULATE
+// ═══════════════════════════════════════════════════════
+function calcAll(){
+  const vat=pf(sett.vat)/100;
+  const Q=computeQ();
+
+  // Frank rows (detailed)
+  const fr=buildFrankRows(Q);
+  const ft=fr.reduce((s,r)=>s+r.amt,0);
+
+  // Materials rows (detailed)
+  const mr=buildMatRows(Q);
+  const mt=mr.reduce((s,r)=>s+r.amt,0);
+
+  // Invoice lines (consolidated)
+  const ir=buildInvoiceLines(Q);
+  const is=ir.reduce((s,r)=>s+r.amt,0);
+
+  const va=is*vat,it=is+va,tc=ft+mt,pr=is-tc;
+  document.getElementById('st-inv').textContent   =fmt(is);
+  document.getElementById('st-vat').textContent   =fmt(it);
+  document.getElementById('st-cost').textContent  =fmt(tc);
+  document.getElementById('st-prof').textContent  =fmt(pr);
+  document.getElementById('st-prof').className    ='stat-val '+(pr>=0?'green':'red');
+  document.getElementById('frank-hdr').textContent=fmt(ft);
+  document.getElementById('mat-hdr').textContent  =fmt(mt);
+  renderTbl('frank-body',fr,'frank');
+  renderTbl('mat-body',mr,'mat');
+  renderInvTbl('inv-body',ir);
+  document.getElementById('inv-sub').textContent  =fmt(is);
+  document.getElementById('inv-vat').textContent  =fmt(va);
+  document.getElementById('inv-tot').textContent  =fmt(it);
+  document.getElementById('vat-pct').textContent  =sett.vat;
+}
+
+function renderTbl(id,rows,type){
+  const tb=document.getElementById(id);if(!tb)return;
+  if(!rows.length){tb.innerHTML='<tr class="empty-row"><td colspan="4">No items entered yet</td></tr>';return;}
+  tb.innerHTML=rows.map(r=>`<tr><td>${r.label}</td><td>${r.qty%1===0?r.qty:r.qty.toFixed(3)} ${r.unit}</td><td>${fmt(r.rate)}</td><td>${fmt(r.amt)}</td></tr>`).join('');
+}
+
+function renderInvTbl(id,rows){
+  const tb=document.getElementById(id);if(!tb)return;
+  if(!rows.length){tb.innerHTML='<tr class="empty-row"><td colspan="4">No items entered yet</td></tr>';return;}
+  tb.innerHTML=rows.map(r=>{
+    const rateStr=r.blended?'—':fmt(r.rate||0);
+    const qtyStr=r.qty%1===0?r.qty:r.qty.toFixed(3);
+    return `<tr><td>${r.label}</td><td>${qtyStr} ${r.unit}</td><td>${rateStr}</td><td>${fmt(r.amt)}</td></tr>`;
+  }).join('');
+}
+
+// ═══════════════════════════════════════════════════════
+// PRICES
+// ═══════════════════════════════════════════════════════
+function renderPriceTable(){
+  const tb=document.getElementById('ptbl-body');let html='';
+  PRICE_GROUPS.forEach(grp=>{
+    html+=`<tr><td colspan="5" class="ptbl-section">${grp.title}</td></tr>`;
+    grp.keys.forEach(key=>{
+      if(!P[key])return;const p=P[key],profit=p.inv-p.frank-p.mat;
+      html+=`<tr><td style="font-size:11px;max-width:110px">${p.label}</td><td style="font-size:11px;color:var(--muted)">${p.unit}</td><td><input type="number" min="0" step="0.01" value="${p.frank.toFixed(2)}" oninput="updPrice('${key}','frank',this.value)"></td><td><input type="number" min="0" step="0.01" value="${p.inv.toFixed(2)}" oninput="updPrice('${key}','inv',this.value)"></td><td><span class="profit-pill">${fmt(profit)}</span></td></tr>`;
+    });
+  });
+  tb.innerHTML=html;
+}
+function updPrice(key,field,val){if(!P[key])return;P[key][field]=pf(val);renderPriceTable();renderCostBreakdown();localStorage.setItem('tjc_prices',JSON.stringify(P));calcAll();}
+function resetPrices(){if(!confirm('Reset all prices to the 2026 defaults?'))return;P=clone(DP);localStorage.setItem('tjc_prices',JSON.stringify(P));renderPriceTable();renderCostBreakdown();calcAll();}
+function saveSett(){sett.vat=pf(document.getElementById('s-vat').value)||15;localStorage.setItem('tjc_sett',JSON.stringify(sett));calcAll();}
+
+function applyRateAdj(field){
+  const pct=pf(document.getElementById('adj-pct').value);
+  if(!pct||pct<=0){alert('Enter a % greater than 0.');return;}
+  const col=field==='frank'?'Tiler':'Invoice';
+  if(!confirm(`Increase ALL ${col} rates by ${pct}%?\nThis cannot be undone except via Reset Defaults.`))return;
+  const snapBefore=clone(P);
+  const mult=1+pct/100;
+  Object.keys(P).forEach(k=>{ P[k][field]=parseFloat((P[k][field]*mult).toFixed(2)); });
+  const entry={id:Date.now(), date:new Date().toISOString().split('T')[0], field, pct, before:snapBefore, after:clone(P)};
+  priceHistory.unshift(entry);
+  if(priceHistory.length>30) priceHistory.pop();
+  localStorage.setItem('tjc_price_hist',JSON.stringify(priceHistory));
+  localStorage.setItem('tjc_prices',JSON.stringify(P));
+  renderPriceTable();renderCostBreakdown();renderPriceHistory();calcAll();
+  document.getElementById('adj-pct').value='';
+}
+
+function renderPriceHistory(){
+  const sec=document.getElementById('price-hist-section');
+  const sel=document.getElementById('price-hist-sel');
+  if(!sec||!sel)return;
+  if(!priceHistory.length){sec.style.display='none';return;}
+  sec.style.display='block';
+  const cur=sel.value;
+  sel.innerHTML='<option value="">— Select an adjustment to view —</option>'+
+    priceHistory.map(e=>{
+      const col=e.field==='frank'?'Tiler':'Invoice';
+      return `<option value="${e.id}">${e.date} — ${col} +${e.pct}%</option>`;
+    }).join('');
+  if(cur) sel.value=cur;
+  showHistoryDetail(sel.value);
+}
+
+function showHistoryDetail(id){
+  const det=document.getElementById('price-hist-detail');
+  const tb=document.getElementById('price-hist-rows');
+  if(!det||!tb){return;}
+  if(!id){det.style.display='none';return;}
+  const entry=priceHistory.find(e=>String(e.id)===String(id));
+  if(!entry){det.style.display='none';return;}
+  const f=entry.field;
+  let html='';
+  Object.keys(entry.before).forEach(k=>{
+    if(!entry.before[k]||!entry.after[k])return;
+    const bef=entry.before[k][f], aft=entry.after[k][f];
+    if(bef===aft||(!bef&&!aft))return;
+    const diff=aft-bef, color=diff>=0?'var(--green)':'var(--red)';
+    html+=`<tr>
+      <td style="font-size:11px">${entry.before[k].label}</td>
+      <td style="text-align:right;font-family:'DM Mono',monospace;font-size:11px">${fmt(bef)}</td>
+      <td style="text-align:right;font-family:'DM Mono',monospace;font-size:11px">${fmt(aft)}</td>
+      <td style="text-align:right;font-family:'DM Mono',monospace;font-size:11px;color:${color}">+${fmt(diff)}</td>
+    </tr>`;
+  });
+  tb.innerHTML=html||'<tr><td colspan="4" style="color:var(--muted);text-align:center;padding:12px;font-size:12px">No rate changes in this entry</td></tr>';
+  det.style.display='block';
+}
+
+function clearPriceHistory(){
+  if(!confirm('Clear all adjustment history?'))return;
+  priceHistory=[];
+  localStorage.removeItem('tjc_price_hist');
+  renderPriceHistory();
+}
+
+function renderCostBreakdown(){
+  const tb=document.getElementById('breakdown-body');if(!tb)return;
+  let html='';
+  const SKIP=new Set(['wpsh','wppt']); // flat-fee items have no meaningful margin
+  PRICE_GROUPS.forEach(grp=>{
+    const keys=grp.keys.filter(k=>P[k]&&P[k].inv>0&&!SKIP.has(k));
+    if(!keys.length)return;
+    html+=`<tr><td colspan="7" class="ptbl-section">${grp.title}</td></tr>`;
+    keys.forEach(k=>{
+      const p=P[k];
+      const cost=p.frank+p.mat;
+      const profit=p.inv-cost;
+      const margin=p.inv>0?(profit/p.inv*100):0;
+      const mColor=margin>=0?'var(--green)':'var(--red)';
+      html+=`<tr>
+        <td style="font-size:11px">${p.label} <span style="color:var(--muted);font-size:10px">(${p.unit})</span></td>
+        <td style="text-align:right;font-family:'DM Mono',monospace;font-size:11px">${fmt(p.frank)}</td>
+        <td style="text-align:right;font-family:'DM Mono',monospace;font-size:11px">${fmt(p.mat)}</td>
+        <td style="text-align:right;font-family:'DM Mono',monospace;font-size:11px;font-weight:600">${fmt(cost)}</td>
+        <td style="text-align:right;font-family:'DM Mono',monospace;font-size:11px">${fmt(p.inv)}</td>
+        <td style="text-align:right;font-family:'DM Mono',monospace;font-size:11px;color:${mColor}">${fmt(profit)}</td>
+        <td style="text-align:right;font-family:'DM Mono',monospace;font-size:11px;color:${mColor}">${margin.toFixed(1)}%</td>
+      </tr>`;
+    });
+  });
+  tb.innerHTML=html;
+}
+
+function switchTab(t){
+  ['meas','summ','pric'].forEach((id,i)=>{
+    document.getElementById('tab-'+id).classList.toggle('active',id===t);
+    document.querySelectorAll('.tab')[i].classList.toggle('active',id===t);
+  });
+  if(t==='summ')calcAll();
+}
+
+function copyInvoice(){
+  if(!curId){alert('No job selected.');return;}
+  const j=jobs[curId],vat=pf(sett.vat)/100;
+  const Q=computeQ();const ir=buildInvoiceLines(Q);
+  const is=ir.reduce((s,r)=>s+r.amt,0);
+  let lines=[`INVOICE — ${j.name||''}`,j.client||'',j.date||'','','--- ITEMS ---'];
+  ir.forEach(r=>{
+    const qStr=r.qty%1===0?r.qty:r.qty.toFixed(2);
+    const rStr=r.blended?'':`× ${fmt(r.rate)} `;
+    lines.push(`${r.label}: ${qStr} ${r.unit} ${rStr}= ${fmt(r.amt)}`);
+  });
+  lines.push('',`Subtotal (excl. VAT): ${fmt(is)}`,`VAT (${sett.vat}%): ${fmt(is*vat)}`,`TOTAL (incl. VAT): ${fmt(is*(1+vat))}`);
+  navigator.clipboard.writeText(lines.join('\n')).then(()=>alert('Invoice copied!')).catch(()=>alert('Copy failed — try a different browser.'));
+}
+</script>
+</body>
+</html>
