@@ -229,6 +229,8 @@ input:focus,select:focus{outline:none;border-color:var(--primary)}
 .ptbl input:focus{border-color:var(--primary);outline:none}
 .profit-pill{font-size:10px;font-weight:700;padding:2px 7px;border-radius:20px;background:var(--green-bg);color:var(--green)}
 .ptbl-section{font-size:11px;font-weight:700;color:var(--muted);padding:9px 6px 4px;letter-spacing:.5px;text-transform:uppercase;border-top:2px solid var(--border)}
+.ptbl-sm th,.ptbl-sm td{padding:5px 4px;font-size:11px}
+.ptbl-sm th{font-size:9px}
 
 /* ── MODAL ── */
 .modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:200;display:none;align-items:flex-end;justify-content:center}
@@ -412,7 +414,9 @@ input:focus,select:focus{outline:none;border-color:var(--primary)}
   <div class="info-box">ℹ️ All prices from your <strong>Real Costs 2026</strong> sheet. Changes save automatically.</div>
   <div class="card">
     <div class="card-header"><div class="card-title"><span class="chip chip-o">💰</span> Rate Sheet</div><button class="btn btn-ghost btn-sm" onclick="resetPrices()">↺ Reset Defaults</button></div>
-    <table class="ptbl"><thead><tr><th>Description</th><th>Unit</th><th>Tiler (R)</th><th>Invoice (R)</th><th>Profit</th></tr></thead><tbody id="ptbl-body"></tbody></table>
+    <div style="overflow-x:auto;-webkit-overflow-scrolling:touch">
+      <table class="ptbl"><thead><tr><th>Description</th><th>Unit</th><th>Tiler (R)</th><th>Invoice (R)</th><th>Profit</th></tr></thead><tbody id="ptbl-body"></tbody></table>
+    </div>
   </div>
   <div class="card">
     <div class="card-header"><div class="card-title"><span class="chip chip-o">📈</span> Rate Adjustment</div></div>
@@ -443,10 +447,10 @@ input:focus,select:focus{outline:none;border-color:var(--primary)}
   <div class="card">
     <div class="card-header"><div class="card-title"><span class="chip chip-b">🔍</span> Cost Breakdown</div></div>
     <div style="font-size:11px;color:var(--muted);margin-bottom:8px">Read-only. Shows how each rate is built up. Edit rates in the Rate Sheet above.</div>
-    <div style="overflow-x:auto">
-      <table class="ptbl" id="breakdown-tbl" style="min-width:480px">
+    <div style="overflow-x:auto;-webkit-overflow-scrolling:touch">
+      <table class="ptbl ptbl-sm" id="breakdown-tbl">
         <thead><tr>
-          <th>Description</th><th>Tiler</th><th>Materials</th><th>Cost/Co.</th><th>Invoice</th><th>Profit</th><th>Margin</th>
+          <th>Description</th><th>Tiler</th><th>Mat.</th><th>Cost</th><th>Inv.</th><th>Profit</th><th>%</th>
         </tr></thead>
         <tbody id="breakdown-body"></tbody>
       </table>
