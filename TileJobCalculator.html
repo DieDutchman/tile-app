@@ -133,6 +133,14 @@ input:focus,select:focus{outline:none;border-color:var(--primary)}
 .wp-note{text-align:right;font-size:11px;color:var(--teal);margin-top:2px}
 .wp-note strong{font-family:'DM Mono',monospace}
 .no-item{font-size:12px;color:var(--muted);padding:4px 0;font-style:italic}
+.area-desc{width:100%;border:none;border-bottom:1px dashed var(--border);background:transparent;font-size:11px;color:var(--muted);padding:2px 0 3px;margin-bottom:4px;font-family:inherit;outline:none}
+.area-desc:focus{border-bottom-color:var(--primary);color:var(--dark)}
+.area-desc::placeholder{color:#C8C8C8}
+.fp-block{margin-bottom:5px}.fp-block .panel-row-nowp{margin-bottom:0}
+.inv-detail-row td{padding-top:0!important}
+.inv-subs{padding:2px 0 5px 12px;display:flex;flex-direction:column;gap:2px}
+.inv-sub{display:flex;justify-content:space-between;font-size:10px;color:var(--muted);line-height:1.4}
+.inv-sub-lbl{font-style:italic}.inv-sub-qty{font-family:'DM Mono',monospace;font-weight:600}
 
 /* ── AUTO A12 PANEL ── */
 .auto-panel{background:#FAFAFA;border:1.5px solid #DDD5F0;border-radius:10px;padding:10px 12px;margin-top:10px}
@@ -397,7 +405,7 @@ input:focus,select:focus{outline:none;border-color:var(--primary)}
     <table class="stbl"><thead><tr><th>Item</th><th>Qty</th><th>Rate</th><th>Amount</th></tr></thead><tbody id="mat-body"></tbody></table>
   </div>
   <div class="card">
-    <div class="card-header"><div class="card-title"><span class="chip chip-g">📄</span> Client Invoice</div><button class="btn btn-ghost btn-sm" onclick="copyInvoice()">📋 Copy</button></div>
+    <div class="card-header"><div class="card-title"><span class="chip chip-g">📄</span> Invoice Details</div><button class="btn btn-ghost btn-sm" onclick="copyInvoice()">📋 Copy</button></div>
     <table class="stbl">
       <thead><tr><th>Item</th><th>Qty</th><th>Rate</th><th>Amount</th></tr></thead>
       <tbody id="inv-body"></tbody>
@@ -800,7 +808,7 @@ function loadJob(id){
   renderAllDoors();renderAllStoeps();
   updateAutoNotes();calcAll();
 }
-function migratePanel(r){return {direct:false,m2:'',...r};}
+function migratePanel(r){return {direct:false,m2:'',desc:'',...r};}
 function migrateBaths(j){
   const src=j.baths||j.showers||[];
   return src.map(b=>{
@@ -1163,7 +1171,7 @@ function renderSFloors(bid){
 }
 
 // Normal floor ops
-function addNFloor(bid){const b=getBath(bid);if(!b)return;b.nFloors.push({id:uid(),l:'',w:'',direct:false,m2:''});renderNFloors(bid);autoSave();}
+function addNFloor(bid){const b=getBath(bid);if(!b)return;b.nFloors.push({id:uid(),l:'',w:'',direct:false,m2:'',desc:''});renderNFloors(bid);autoSave();}
 function removeNFloor(bid,pid){const b=getBath(bid);if(!b)return;b.nFloors=b.nFloors.filter(r=>r.id!==pid);renderNFloors(bid);autoSave();}
 function updateNFloor(bid,pid,field,val){
   const b=getBath(bid);if(!b)return;const r=b.nFloors.find(r=>r.id===pid);if(r){r[field]=val;r.direct=false;}
@@ -1179,7 +1187,7 @@ function renderNFloors(bid){
   if(!b.nFloors.length){box.innerHTML='<div class="no-item">No panels — tap + to add</div>';}
   else box.innerHTML=b.nFloors.map(r=>{
     const a=pf(r.l)*pf(r.w);const disp=r.direct?pf(r.m2||0):a;
-    return `<div class="panel-row-nowp"><input id="nf-l-${r.id}" type="number" placeholder="0.00" min="0" step="0.01" value="${r.l||''}" class="${r.direct?'lw-dim':''}" oninput="updateNFloor('${bid}','${r.id}','l',this.value)"><input id="nf-w-${r.id}" type="number" placeholder="0.00" min="0" step="0.01" value="${r.w||''}" class="${r.direct?'lw-dim':''}" oninput="updateNFloor('${bid}','${r.id}','w',this.value)"><input id="nf-m2-${r.id}" class="m2-inp${r.direct?' direct':''}" type="number" min="0" step="0.01" placeholder="m²" value="${disp>0?disp.toFixed(2):''}" oninput="setDirectNF('${bid}','${r.id}',this.value)"><button class="rmv" onclick="removeNFloor('${bid}','${r.id}')">×</button></div>`;
+    return `<div class="fp-block"><input class="area-desc" type="text" placeholder="Description (e.g. Bathroom floor)" value="${(r.desc||'').replace(/"/g,'&quot;')}" oninput="updateNFloorDesc('${bid}','${r.id}',this.value)"><div class="panel-row-nowp"><input id="nf-l-${r.id}" type="number" placeholder="0.00" min="0" step="0.01" value="${r.l||''}" class="${r.direct?'lw-dim':''}" oninput="updateNFloor('${bid}','${r.id}','l',this.value)"><input id="nf-w-${r.id}" type="number" placeholder="0.00" min="0" step="0.01" value="${r.w||''}" class="${r.direct?'lw-dim':''}" oninput="updateNFloor('${bid}','${r.id}','w',this.value)"><input id="nf-m2-${r.id}" class="m2-inp${r.direct?' direct':''}" type="number" min="0" step="0.01" placeholder="m²" value="${disp>0?disp.toFixed(2):''}" oninput="setDirectNF('${bid}','${r.id}',this.value)"><button class="rmv" onclick="removeNFloor('${bid}','${r.id}')">×</button></div></div>`;
   }).join('');
   refreshBathTotals(bid);
 }
@@ -1340,7 +1348,7 @@ function renderAllDoors(){
 function addStoep(){if(!curId){alert('Please select or create a job first.');return;}stoeps.push({id:uid(),name:'Front Stoep '+(stoeps.length+1),panels:[],tileType:'nt',alumType:'a45',alumL:''});renderAllStoeps();autoSave();document.getElementById('stoep-list').lastElementChild?.scrollIntoView({behavior:'smooth',block:'start'});}
 function removeStoep(sid){if(!confirm('Remove this stoep area?'))return;stoeps=stoeps.filter(s=>s.id!==sid);renderAllStoeps();autoSave();}
 function renameStoep(sid,val){const s=stoeps.find(s=>s.id===sid);if(s)s.name=val;autoSave();}
-function addStoepPanel(sid){const s=stoeps.find(s=>s.id===sid);if(!s)return;s.panels.push({id:uid(),l:'',w:'',direct:false,m2:''});renderStoepPanels(sid);autoSave();}
+function addStoepPanel(sid){const s=stoeps.find(s=>s.id===sid);if(!s)return;s.panels.push({id:uid(),l:'',w:'',direct:false,m2:'',desc:''});renderStoepPanels(sid);autoSave();}
 function removeStoepPanel(sid,pid){const s=stoeps.find(s=>s.id===sid);if(!s)return;s.panels=s.panels.filter(p=>p.id!==pid);renderStoepPanels(sid);autoSave();}
 function updateStoepPanel(sid,pid,field,val){
   const s=stoeps.find(s=>s.id===sid);if(!s)return;const p=s.panels.find(p=>p.id===pid);if(p){p[field]=val;p.direct=false;}
@@ -1377,7 +1385,7 @@ function renderStoepPanels(sid){
   if(!s.panels.length){box.innerHTML='<div class="no-item">No areas — tap + Area to add</div>';}
   else box.innerHTML=s.panels.map(p=>{
     const a=pf(p.l)*pf(p.w);const disp=p.direct?pf(p.m2||0):a;
-    return `<div class="panel-row-nowp"><input id="st-l-${p.id}" type="number" placeholder="0.00" min="0" step="0.01" value="${p.l||''}" class="${p.direct?'lw-dim':''}" oninput="updateStoepPanel('${sid}','${p.id}','l',this.value)"><input id="st-w-${p.id}" type="number" placeholder="0.00" min="0" step="0.01" value="${p.w||''}" class="${p.direct?'lw-dim':''}" oninput="updateStoepPanel('${sid}','${p.id}','w',this.value)"><input id="st-m2-${p.id}" class="m2-inp${p.direct?' direct':''}" type="number" min="0" step="0.01" placeholder="m²" value="${disp>0?disp.toFixed(2):''}" oninput="setDirectStoep('${sid}','${p.id}',this.value)"><button class="rmv" onclick="removeStoepPanel('${sid}','${p.id}')">×</button></div>`;
+    return `<div class="fp-block"><input class="area-desc" type="text" placeholder="Description (e.g. Front stoep)" value="${(p.desc||'').replace(/"/g,'&quot;')}" oninput="updateStoepPanelDesc('${sid}','${p.id}',this.value)"><div class="panel-row-nowp"><input id="st-l-${p.id}" type="number" placeholder="0.00" min="0" step="0.01" value="${p.l||''}" class="${p.direct?'lw-dim':''}" oninput="updateStoepPanel('${sid}','${p.id}','l',this.value)"><input id="st-w-${p.id}" type="number" placeholder="0.00" min="0" step="0.01" value="${p.w||''}" class="${p.direct?'lw-dim':''}" oninput="updateStoepPanel('${sid}','${p.id}','w',this.value)"><input id="st-m2-${p.id}" class="m2-inp${p.direct?' direct':''}" type="number" min="0" step="0.01" placeholder="m²" value="${disp>0?disp.toFixed(2):''}" oninput="setDirectStoep('${sid}','${p.id}',this.value)"><button class="rmv" onclick="removeStoepPanel('${sid}','${p.id}')">×</button></div></div>`;
   }).join('');
   updateStoepTotal(sid);
 }
@@ -1415,7 +1423,7 @@ function renderAllStoeps(){
 // ═══════════════════════════════════════════════════════
 // FLOOR PANELS (outside bathroom)
 // ═══════════════════════════════════════════════════════
-function addFloorPanel(sec){if(!curId){alert('Please select or create a job first.');return;}if(!panels[sec])panels[sec]=[];panels[sec].push({id:uid(),l:'',w:'',direct:false,m2:''});renderFloorPanels(sec);autoSave();}
+function addFloorPanel(sec){if(!curId){alert('Please select or create a job first.');return;}if(!panels[sec])panels[sec]=[];panels[sec].push({id:uid(),l:'',w:'',direct:false,m2:'',desc:''});renderFloorPanels(sec);autoSave();}
 function rmFloorPanel(sec,id){panels[sec]=(panels[sec]||[]).filter(r=>r.id!==id);renderFloorPanels(sec);autoSave();}
 function upFloorPanel(sec,id,field,val){
   const r=(panels[sec]||[]).find(r=>r.id===id);if(r){r[field]=val;r.direct=false;}
@@ -1429,12 +1437,16 @@ function upFloorPanel(sec,id,field,val){
 function renderFloorPanels(sec){
   const box=document.getElementById('panels-'+sec);if(!box)return;box.innerHTML='';
   (panels[sec]||[]).forEach(r=>{
-    const a=pf(r.l)*pf(r.w);const disp=r.direct?pf(r.m2||0):a;const d=document.createElement('div');d.className='panel-row-nowp';d.id='fp-'+r.id;
-    d.innerHTML=`<input id="fp-l-${r.id}" type="number" placeholder="0.00" min="0" step="0.01" value="${r.l||''}" class="${r.direct?'lw-dim':''}" oninput="upFloorPanel('${sec}','${r.id}','l',this.value)"><input id="fp-w-${r.id}" type="number" placeholder="0.00" min="0" step="0.01" value="${r.w||''}" class="${r.direct?'lw-dim':''}" oninput="upFloorPanel('${sec}','${r.id}','w',this.value)"><input id="fp-m2-${r.id}" class="m2-inp${r.direct?' direct':''}" type="number" min="0" step="0.01" placeholder="m²" value="${disp>0?disp.toFixed(2):''}" oninput="setDirectFP('${sec}','${r.id}',this.value)"><button class="rmv" onclick="rmFloorPanel('${sec}','${r.id}')">×</button>`;
+    const a=pf(r.l)*pf(r.w);const disp=r.direct?pf(r.m2||0):a;
+    const d=document.createElement('div');d.className='fp-block';d.id='fp-'+r.id;
+    d.innerHTML=`<input class="area-desc" type="text" placeholder="Description (e.g. Lounge)" value="${(r.desc||'').replace(/"/g,'&quot;')}" oninput="upFloorPanelDesc('${sec}','${r.id}',this.value)"><div class="panel-row-nowp"><input id="fp-l-${r.id}" type="number" placeholder="0.00" min="0" step="0.01" value="${r.l||''}" class="${r.direct?'lw-dim':''}" oninput="upFloorPanel('${sec}','${r.id}','l',this.value)"><input id="fp-w-${r.id}" type="number" placeholder="0.00" min="0" step="0.01" value="${r.w||''}" class="${r.direct?'lw-dim':''}" oninput="upFloorPanel('${sec}','${r.id}','w',this.value)"><input id="fp-m2-${r.id}" class="m2-inp${r.direct?' direct':''}" type="number" min="0" step="0.01" placeholder="m²" value="${disp>0?disp.toFixed(2):''}" oninput="setDirectFP('${sec}','${r.id}',this.value)"><button class="rmv" onclick="rmFloorPanel('${sec}','${r.id}')">×</button></div>`;
     box.appendChild(d);
   });
   const el=document.getElementById('tot-'+sec);if(el)el.innerHTML=`Total: <strong>${floorArea(sec).toFixed(2)} m²</strong>`;
 }
+function upFloorPanelDesc(sec,id,val){const r=(panels[sec]||[]).find(r=>r.id===id);if(r)r.desc=val;autoSave();}
+function updateNFloorDesc(bid,pid,val){const b=getBath(bid);if(!b)return;const r=(b.nFloors||[]).find(r=>r.id===pid);if(r)r.desc=val;autoSave();}
+function updateStoepPanelDesc(sid,pid,val){const s=stoeps.find(s=>s.id===sid);if(!s)return;const p=s.panels.find(p=>p.id===pid);if(p)p.desc=val;autoSave();}
 function togglePatioWP(){if(!curId)return;patioWP=!patioWP;document.getElementById('tog-wpp').classList.toggle('on',patioWP);autoSave();}
 function togglePatioFrankWP(){if(!curId)return;patioFrankWP=!patioFrankWP;document.getElementById('tog-patio-frank-wp').classList.toggle('on',patioFrankWP);autoSave();}
 function toggleBathFrankWP(bid){const b=getBath(bid);if(!b)return;b.frankWP=!b.frankWP;const el=document.getElementById('bath-fwp-'+bid);if(el){el.classList.toggle('on',b.frankWP);el.textContent=b.frankWP?'WP✓':'WP';}autoSave();}
@@ -1518,6 +1530,31 @@ function toggleBathCard(bid){
 // ═══════════════════════════════════════════════════════
 // CALCULATE
 // ═══════════════════════════════════════════════════════
+function computeQDetailed(){
+  const D={};
+  const add=(k,label,qty)=>{if(qty<=0)return;if(!D[k])D[k]=[];D[k].push({label,qty});};
+  baths.forEach(b=>{
+    const wallType=b.wallTileType||'sw';
+    const fw=b.focusWall||{};
+    const fwA=wallArea(fw);if(fwA>0) add(fwEffectiveType(b), b.name+' — Focus Wall', fwA);
+    (b.sideWalls||[]).forEach((w,i)=>{const a=wallArea(w);if(a>0)add(wallType,b.name+' — Wall '+(i+1),a);});
+    const sfType=b.sFloorType||'sf';
+    (b.sFloors||[]).forEach((f,i)=>{const a=panelArea([f]);if(a>0)add(sfType,b.name+(b.sFloors.length>1?' — Shower '+(i+1):''),a);});
+    const nfType=b.nFloorType||'nt';
+    (b.nFloors||[]).forEach((f,i)=>{const a=panelArea([f]);if(a>0)add(nfType,f.desc||(b.name+(b.nFloors.length>1?' — Floor '+(i+1):' — Floor')),a);});
+  });
+  ['nt','ot','st','mt'].forEach(k=>{(panels[k]||[]).forEach((r,i)=>{const a=panelArea([r]);if(a>0)add(k,r.desc||('Area '+(i+1)),a);});});
+  (panels.pt||[]).forEach((r,i)=>{const a=panelArea([r]);if(a>0)add(patioTileType||'pt',r.desc||('Patio '+(i+1)),a);});
+  stoeps.forEach(s=>{(s.panels||[]).forEach((p,i)=>{const a=panelArea([p]);if(a>0)add(s.tileType||'nt',(s.name||'Stoep')+(p.desc?' — '+p.desc:(s.panels.length>1?' — '+(i+1):'')),a);});});
+  baths.forEach(b=>{
+    const fw=b.focusWall||{};
+    if(fw.wps){const a=wallArea(fw);if(a>0)add('wps',b.name+' — Focus Wall',a);}
+    (b.sideWalls||[]).forEach((w,i)=>{if(w.wps){const a=wallArea(w);if(a>0)add('wps',b.name+' — Wall '+(i+1),a);}});
+    (b.sFloors||[]).forEach((f,i)=>{if(f.wps){const a=panelArea([f]);if(a>0)add('wps',b.name+(b.sFloors.length>1?' — Shower '+(i+1):''),a);}});
+  });
+  if(patioWP){(panels.pt||[]).forEach((r,i)=>{const a=panelArea([r]);if(a>0)add('wpp',r.desc||('Patio '+(i+1)),a);});}
+  return D;
+}
 function calcAll(){
   const vat=pf(sett.vat)/100;
   const Q=computeQ();
@@ -1544,7 +1581,7 @@ function calcAll(){
   document.getElementById('mat-hdr').textContent  =fmt(mt);
   renderTbl('frank-body',fr,'frank');
   renderTbl('mat-body',mr,'mat');
-  renderInvTbl('inv-body',ir);
+  renderInvTbl('inv-body',ir,computeQDetailed());
   document.getElementById('inv-sub').textContent  =fmt(is);
   document.getElementById('inv-vat').textContent  =fmt(va);
   document.getElementById('inv-tot').textContent  =fmt(it);
@@ -1557,13 +1594,17 @@ function renderTbl(id,rows,type){
   tb.innerHTML=rows.map(r=>`<tr><td>${r.label}</td><td>${r.qty%1===0?r.qty:r.qty.toFixed(3)} ${r.unit}</td><td>${fmt(r.rate)}</td><td>${fmt(r.amt)}</td></tr>`).join('');
 }
 
-function renderInvTbl(id,rows){
+function renderInvTbl(id,rows,detail){
   const tb=document.getElementById(id);if(!tb)return;
   if(!rows.length){tb.innerHTML='<tr class="empty-row"><td colspan="4">No items entered yet</td></tr>';return;}
   tb.innerHTML=rows.map(r=>{
     const rateStr=r.blended?'—':fmt(r.rate||0);
     const qtyStr=r.qty%1===0?r.qty:r.qty.toFixed(3);
-    return `<tr><td>${r.label}</td><td>${qtyStr} ${r.unit}</td><td>${rateStr}</td><td>${fmt(r.amt)}</td></tr>`;
+    const items=(detail&&detail[r.key])||[];
+    const subHtml=items.length>1?`<tr class="inv-detail-row"><td colspan="4"><div class="inv-subs">${
+      items.map(it=>`<div class="inv-sub"><span class="inv-sub-lbl">${it.label}</span><span class="inv-sub-qty">${it.qty.toFixed(2)} m²</span></div>`).join('')
+    }</div></td></tr>`:'';
+    return `<tr><td>${r.label}</td><td>${qtyStr} ${r.unit}</td><td>${rateStr}</td><td>${fmt(r.amt)}</td></tr>${subHtml}`;
   }).join('');
 }
 
