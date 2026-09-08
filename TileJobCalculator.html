@@ -202,6 +202,8 @@ input:focus,select:focus{outline:none;border-color:var(--primary)}
 .toggle.on{background:var(--primary)}
 .toggle::after{content:'';position:absolute;width:20px;height:20px;border-radius:50%;background:#fff;top:2px;left:2px;transition:.2s;box-shadow:0 1px 3px rgba(0,0,0,.2)}
 .toggle.on::after{transform:translateX(18px)}
+.status-date{width:auto!important;padding:5px 8px!important;font-size:12px!important;margin-top:4px;display:none}
+.status-date.show{display:inline-block}
 
 /* ── BUTTONS ── */
 .btn{padding:9px 15px;border-radius:8px;border:none;font-size:12px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:5px;transition:.15s;font-family:inherit}
@@ -390,6 +392,21 @@ input:focus,select:focus{outline:none;border-color:var(--primary)}
 
 <!-- ══ SUMMARY ══ -->
 <div id="tab-summ" class="tab-panel">
+  <div class="card">
+    <div class="card-header"><div class="card-title"><span class="chip chip-g">✅</span> Job Status</div></div>
+    <div class="tog-row">
+      <div class="tog-info"><div class="tlabel">Invoiced</div><div class="tsub">Client has been invoiced</div>
+        <input type="date" class="status-date" id="inv-date" oninput="statusDateChanged('invoiced')">
+      </div>
+      <div class="toggle" id="tog-invoiced" onclick="toggleStatus('invoiced')"></div>
+    </div>
+    <div class="tog-row">
+      <div class="tog-info"><div class="tlabel">Tiler Paid</div><div class="tsub">You've paid the tiler for this job</div>
+        <input type="date" class="status-date" id="paid-date" oninput="statusDateChanged('tilerPaid')">
+      </div>
+      <div class="toggle" id="tog-tilerPaid" onclick="toggleStatus('tilerPaid')"></div>
+    </div>
+  </div>
   <div class="stats">
     <div class="stat"><div class="stat-label">Invoice excl. VAT</div><div class="stat-val blue" id="st-inv">R0.00</div></div>
     <div class="stat"><div class="stat-label">Invoice incl. VAT</div><div class="stat-val blue" id="st-vat">R0.00</div></div>
@@ -762,7 +779,8 @@ function rebuildJobSel(){
   sel.innerHTML='<option value="">— Select a Job —</option>';
   Object.keys(jobs).sort((a,b)=>(jobs[b].ts||0)-(jobs[a].ts||0)).forEach(id=>{
     const o=document.createElement('option');
-    o.value=id;o.textContent=jobs[id].name||id;sel.appendChild(o);
+    const badge=(jobs[id].invoiced?'💰':'')+(jobs[id].tilerPaid?'👷':'');
+    o.value=id;o.textContent=(jobs[id].name||id)+(badge?' '+badge:'');sel.appendChild(o);
   });
   if(cur)sel.value=cur;
 }
@@ -773,7 +791,8 @@ function createJob(){
   const client=document.getElementById('m-client').value.trim();
   const id='j'+Date.now();
   jobs[id]={name,client,ts:Date.now(),date:new Date().toISOString().split('T')[0],
-    notes:'',baths:[],panels:{},patioWP:false,patioFrankWP:false,lins:{},patioTileType:'pt',patioA45:'',doors:[],stoeps:[],wastage:0};
+    notes:'',baths:[],panels:{},patioWP:false,patioFrankWP:false,lins:{},patioTileType:'pt',patioA45:'',doors:[],stoeps:[],wastage:0,
+    invoiced:false,invoicedDate:'',tilerPaid:false,tilerPaidDate:''};
   saveJobs();rebuildJobSel();closeModal();
   document.getElementById('m-name').value='';document.getElementById('m-client').value='';
   document.getElementById('jobSel').value=id;loadJob(id);
@@ -806,6 +825,7 @@ function loadJob(id){
   document.getElementById('patio-a45').value=patioA45;
   renderPatioTileRow();
   renderAllDoors();renderAllStoeps();
+  renderStatus();
   updateAutoNotes();calcAll();
 }
 function migratePanel(r){return {direct:false,m2:'',desc:'',...r};}
@@ -838,6 +858,29 @@ function clearAll(){
   LIN_KEYS.forEach(k=>{const el=document.getElementById('li-'+k);if(el)el.value='';});
   document.getElementById('patio-a45').value='';
   renderPatioTileRow();renderAllDoors();renderAllStoeps();
+  renderStatus();
+}
+function renderStatus(){
+  const j=jobs[curId]||{};
+  document.getElementById('tog-invoiced').classList.toggle('on',!!j.invoiced);
+  document.getElementById('tog-tilerPaid').classList.toggle('on',!!j.tilerPaid);
+  const invEl=document.getElementById('inv-date'),paidEl=document.getElementById('paid-date');
+  invEl.value=j.invoicedDate||'';invEl.classList.toggle('show',!!j.invoiced);
+  paidEl.value=j.tilerPaidDate||'';paidEl.classList.toggle('show',!!j.tilerPaid);
+}
+function toggleStatus(field){
+  if(!curId)return;
+  const j=jobs[curId];
+  j[field]=!j[field];
+  const dateField=field+'Date';
+  if(j[field]&&!j[dateField])j[dateField]=new Date().toISOString().split('T')[0];
+  saveJobs();rebuildJobSel();renderStatus();
+}
+function statusDateChanged(field){
+  if(!curId)return;
+  const el=document.getElementById(field==='invoiced'?'inv-date':'paid-date');
+  jobs[curId][field+'Date']=el.value;
+  saveJobs();
 }
 function deleteJob(){
   if(!curId)return;if(!confirm(`Delete "${jobs[curId]?.name||curId}"?`))return;
@@ -850,6 +893,8 @@ function duplicateJob(){
   jobs[newId]=clone(jobs[curId]);
   jobs[newId].name='Copy of '+(jobs[curId].name||curId);
   jobs[newId].ts=Date.now();
+  jobs[newId].invoiced=false;jobs[newId].invoicedDate='';
+  jobs[newId].tilerPaid=false;jobs[newId].tilerPaidDate='';
   saveJobs();rebuildJobSel();
   document.getElementById('jobSel').value=newId;loadJob(newId);
 }
