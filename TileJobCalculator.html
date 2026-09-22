@@ -441,7 +441,18 @@ input:focus,select:focus{outline:none;border-color:var(--primary)}
   <div class="card">
     <div class="card-header"><div class="card-title"><span class="chip chip-o">💰</span> Rate Sheet</div><button class="btn btn-ghost btn-sm" onclick="resetPrices()">↺ Reset Defaults</button></div>
     <div style="overflow-x:auto;-webkit-overflow-scrolling:touch">
-      <table class="ptbl"><thead><tr><th>Description</th><th>Unit</th><th>Tiler (R)</th><th>Invoice (R)</th><th>Profit</th></tr></thead><tbody id="ptbl-body"></tbody></table>
+      <table class="ptbl"><thead><tr><th>Description</th><th>Unit</th><th>Tiler (R)</th><th>Invoice (R)</th><th>Profit</th><th></th></tr></thead><tbody id="ptbl-body"></tbody></table>
+    </div>
+    <div style="margin-top:12px;border-top:1px solid var(--border);padding-top:12px">
+      <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">+ Add Custom Tile Type</div>
+      <div class="field" style="margin-bottom:8px"><label>Name</label><input type="text" id="ct-label" placeholder="e.g. Cladding" style="padding:9px 11px;border:1.5px solid var(--border);border-radius:8px;font-size:14px;font-family:inherit;width:100%"></div>
+      <div class="field" style="margin-bottom:8px"><label>Applies to</label><div id="ct-area-pills" style="display:flex;flex-wrap:wrap;gap:6px"></div></div>
+      <div style="display:flex;gap:8px;margin-bottom:10px">
+        <div class="field" style="flex:1;margin:0"><label>Tiler (R/m²)</label><input type="number" id="ct-frank" min="0" step="0.01" placeholder="0.00" style="padding:9px 11px;border:1.5px solid var(--border);border-radius:8px;font-size:14px;font-family:inherit;width:100%"></div>
+        <div class="field" style="flex:1;margin:0"><label>Material (R/m²)</label><input type="number" id="ct-mat" min="0" step="0.01" placeholder="0.00" style="padding:9px 11px;border:1.5px solid var(--border);border-radius:8px;font-size:14px;font-family:inherit;width:100%"></div>
+        <div class="field" style="flex:1;margin:0"><label>Invoice (R/m²)</label><input type="number" id="ct-inv" min="0" step="0.01" placeholder="0.00" style="padding:9px 11px;border:1.5px solid var(--border);border-radius:8px;font-size:14px;font-family:inherit;width:100%"></div>
+      </div>
+      <button class="btn btn-ghost" style="width:100%" onclick="addCustomTile()">+ Add Tile Type</button>
     </div>
   </div>
   <div class="card">
@@ -571,15 +582,88 @@ const PRICE_GROUPS = [
 ];
 
 // Tile type options per context
-const WALL_TILES  = [{v:'sw',l:'Shower'},{v:'nt',l:'Normal'},{v:'ot',l:'Oversize'},{v:'st',l:'Subway'},{v:'mt',l:'Mosaic'}];
-const SF_TILES    = [{v:'sf',l:'Shower Floor'},{v:'nt',l:'Normal'},{v:'mt',l:'Mosaic'}];
-const NF_TILES    = [{v:'nt',l:'Normal'},{v:'ot',l:'Oversize'},{v:'st',l:'Subway'},{v:'mt',l:'Mosaic'}];
-const PATIO_TILES = [{v:'pt',l:'Patio'},{v:'nt',l:'Normal'},{v:'ot',l:'Oversize'}];
-const STOEP_TILES = [{v:'nt',l:'Normal'},{v:'ot',l:'Oversize'},{v:'st',l:'Subway'},{v:'mt',l:'Mosaic'}];
+const BASE_WALL_TILES  = [{v:'sw',l:'Shower'},{v:'nt',l:'Normal'},{v:'ot',l:'Oversize'},{v:'st',l:'Subway'},{v:'mt',l:'Mosaic'}];
+const BASE_SF_TILES    = [{v:'sf',l:'Shower Floor'},{v:'nt',l:'Normal'},{v:'mt',l:'Mosaic'}];
+const BASE_NF_TILES    = [{v:'nt',l:'Normal'},{v:'ot',l:'Oversize'},{v:'st',l:'Subway'},{v:'mt',l:'Mosaic'}];
+const BASE_PATIO_TILES = [{v:'pt',l:'Patio'},{v:'nt',l:'Normal'},{v:'ot',l:'Oversize'}];
+const BASE_STOEP_TILES = [{v:'nt',l:'Normal'},{v:'ot',l:'Oversize'},{v:'st',l:'Subway'},{v:'mt',l:'Mosaic'}];
+const WALL_TILES  = [...BASE_WALL_TILES];
+const SF_TILES    = [...BASE_SF_TILES];
+const NF_TILES    = [...BASE_NF_TILES];
+const PATIO_TILES = [...BASE_PATIO_TILES];
+const STOEP_TILES = [...BASE_STOEP_TILES];
 const ALUM_OPTIONS= [{value:'none',label:'No aluminium'},{value:'a12',label:'Alum 12mm'},{value:'a10',label:'Alum 10mm'},{value:'a45',label:'Alum 45° Ramp'}];
 
 const FLOOR_SECS  = ['nt','ot','st','mt','pt'];
 const LIN_KEYS    = ['a12','a10','a45','skp','skw','sdk','ska'];
+const BASE_TILE_KEYS = ['sw','sf','nt','ot','st','mt','pt'];
+
+// Custom tile types (user-added via Prices tab). {key,label,areas:['wall'|'sf'|'nf'|'patio'|'stoep',...]}
+const CUSTOM_AREA_DEFS = [
+  {v:'wall',  l:'Walls',        list:WALL_TILES,  base:BASE_WALL_TILES},
+  {v:'sf',    l:'Shower Floor', list:SF_TILES,    base:BASE_SF_TILES},
+  {v:'nf',    l:'Normal Floor', list:NF_TILES,    base:BASE_NF_TILES},
+  {v:'patio', l:'Patio',        list:PATIO_TILES, base:BASE_PATIO_TILES},
+  {v:'stoep', l:'Stoep',        list:STOEP_TILES, base:BASE_STOEP_TILES},
+];
+let customTiles=[];
+let newCTAreas=new Set();
+
+function rebuildTileLists(){
+  CUSTOM_AREA_DEFS.forEach(def=>{
+    def.list.length=0;
+    def.list.push(...def.base);
+    customTiles.filter(c=>c.areas.includes(def.v)).forEach(c=>def.list.push({v:c.key,l:c.label}));
+  });
+  TILE_KEYS.clear();
+  BASE_TILE_KEYS.forEach(k=>TILE_KEYS.add(k));
+  customTiles.forEach(c=>TILE_KEYS.add(c.key));
+  const tileGrp=PRICE_GROUPS.find(g=>g.title==='Tile Rates');
+  tileGrp.keys=BASE_TILE_KEYS.concat(customTiles.map(c=>c.key));
+}
+function saveCustomTiles(){localStorage.setItem('tjc_custom_tiles',JSON.stringify(customTiles));}
+function slugKey(label){
+  let base='ct_'+label.toLowerCase().replace(/[^a-z0-9]+/g,'_').replace(/^_+|_+$/g,'')||'ct_custom';
+  let k=base,i=1;
+  while(P[k]||BASE_TILE_KEYS.includes(k)) k=base+'_'+(i++);
+  return k;
+}
+function toggleCTArea(v){ newCTAreas.has(v)?newCTAreas.delete(v):newCTAreas.add(v); renderCTAreaPills(); }
+function renderCTAreaPills(){
+  const el=document.getElementById('ct-area-pills');if(!el)return;
+  el.innerHTML=CUSTOM_AREA_DEFS.map(d=>`<button type="button" class="tpill sm${newCTAreas.has(d.v)?' active':''}" onclick="toggleCTArea('${d.v}')">${d.l}</button>`).join('');
+}
+function addCustomTile(){
+  const labelEl=document.getElementById('ct-label');
+  const label=labelEl.value.trim();
+  if(!label){alert('Enter a name for the tile type.');return;}
+  if(!newCTAreas.size){alert('Pick at least one area it applies to.');return;}
+  const frank=pf(document.getElementById('ct-frank').value);
+  const mat  =pf(document.getElementById('ct-mat').value);
+  const inv  =pf(document.getElementById('ct-inv').value);
+  const key=slugKey(label);
+  customTiles.push({key,label,areas:[...newCTAreas]});
+  P[key]={label,unit:'m²',frank,mat,inv};
+  saveCustomTiles();
+  localStorage.setItem('tjc_prices',JSON.stringify(P));
+  rebuildTileLists();
+  labelEl.value='';document.getElementById('ct-frank').value='';document.getElementById('ct-mat').value='';document.getElementById('ct-inv').value='';
+  newCTAreas.clear();renderCTAreaPills();
+  renderPriceTable();renderCostBreakdown();
+  renderPatioTileRow();
+  if(curId) loadJob(curId);
+}
+function deleteCustomTile(key){
+  const ct=customTiles.find(c=>c.key===key);if(!ct)return;
+  if(!confirm(`Delete "${ct.label}"? Any area currently using it will drop back to zero quantity until you pick a different tile type.`))return;
+  customTiles=customTiles.filter(c=>c.key!==key);
+  delete P[key];
+  saveCustomTiles();
+  localStorage.setItem('tjc_prices',JSON.stringify(P));
+  rebuildTileLists();
+  renderPriceTable();renderCostBreakdown();
+  if(curId) loadJob(curId);
+}
 
 // ═══════════════════════════════════════════════════════
 // STATE
@@ -602,13 +686,15 @@ window.onload = () => {
   P            = JSON.parse(localStorage.getItem('tjc_prices')    || 'null') || clone(DP);
   sett         = JSON.parse(localStorage.getItem('tjc_sett')      || '{"vat":15}');
   priceHistory = JSON.parse(localStorage.getItem('tjc_price_hist')|| '[]');
+  customTiles  = JSON.parse(localStorage.getItem('tjc_custom_tiles')|| '[]');
   Object.keys(DP).forEach(k=>{ if(!P[k]) P[k]=clone(DP[k]); });
   // Remove legacy nf/fs from prices if present
   delete P.nf; delete P.fs;
   // Migrate: wps/wpp frank now 0 (flat-fee model via wpsh/wppt)
   if(P.wps.frank===27.22) P.wps.frank=0;
   if(P.wpp.frank===27.22) P.wpp.frank=0;
-  rebuildJobSel(); renderPriceTable(); renderCostBreakdown(); renderPriceHistory(); renderPatioTileRow();
+  rebuildTileLists();
+  rebuildJobSel(); renderPriceTable(); renderCostBreakdown(); renderPriceHistory(); renderPatioTileRow(); renderCTAreaPills();
   document.getElementById('s-vat').value        = sett.vat;
   document.getElementById('vat-pct').textContent = sett.vat;
   const last=localStorage.getItem('tjc_last');
@@ -742,7 +828,7 @@ function buildInvoiceLines(Q){
   const lines=[];
 
   // Per-tile-type lines (each tile type that has area → own line)
-  ['sw','sf','nt','ot','st','mt','pt'].forEach(k=>{
+  [...TILE_KEYS].forEach(k=>{
     if(!Q[k]||!P[k]) return;
     lines.push({key:k, label:P[k].label, qty:Q[k], unit:'m²', rate:P[k].inv, amt:Q[k]*P[k].inv});
   });
@@ -1659,16 +1745,18 @@ function renderInvTbl(id,rows,detail){
 function renderPriceTable(){
   const tb=document.getElementById('ptbl-body');let html='';
   PRICE_GROUPS.forEach(grp=>{
-    html+=`<tr><td colspan="5" class="ptbl-section">${grp.title}</td></tr>`;
+    html+=`<tr><td colspan="6" class="ptbl-section">${grp.title}</td></tr>`;
     grp.keys.forEach(key=>{
       if(!P[key])return;const p=P[key],profit=p.inv-p.frank-p.mat;
-      html+=`<tr><td style="font-size:11px;max-width:110px">${p.label}</td><td style="font-size:11px;color:var(--muted)">${p.unit}</td><td><input type="number" min="0" step="0.01" value="${p.frank.toFixed(2)}" oninput="updPrice('${key}','frank',this.value)"></td><td><input type="number" min="0" step="0.01" value="${p.inv.toFixed(2)}" oninput="updPrice('${key}','inv',this.value)"></td><td><span class="profit-pill">${fmt(profit)}</span></td></tr>`;
+      const isCustom=customTiles.some(c=>c.key===key);
+      const delCell=isCustom?`<button class="rmv" title="Delete custom tile type" onclick="deleteCustomTile('${key}')">×</button>`:'';
+      html+=`<tr><td style="font-size:11px;max-width:110px">${p.label}</td><td style="font-size:11px;color:var(--muted)">${p.unit}</td><td><input type="number" min="0" step="0.01" value="${p.frank.toFixed(2)}" oninput="updPrice('${key}','frank',this.value)"></td><td><input type="number" min="0" step="0.01" value="${p.inv.toFixed(2)}" oninput="updPrice('${key}','inv',this.value)"></td><td><span class="profit-pill">${fmt(profit)}</span></td><td>${delCell}</td></tr>`;
     });
   });
   tb.innerHTML=html;
 }
 function updPrice(key,field,val){if(!P[key])return;P[key][field]=pf(val);renderPriceTable();renderCostBreakdown();localStorage.setItem('tjc_prices',JSON.stringify(P));calcAll();}
-function resetPrices(){if(!confirm('Reset all prices to the 2026 defaults?'))return;P=clone(DP);localStorage.setItem('tjc_prices',JSON.stringify(P));renderPriceTable();renderCostBreakdown();calcAll();}
+function resetPrices(){if(!confirm('Reset built-in prices to the 2026 defaults? (Your custom tile types keep their current rates.)'))return;Object.keys(DP).forEach(k=>P[k]=clone(DP[k]));localStorage.setItem('tjc_prices',JSON.stringify(P));renderPriceTable();renderCostBreakdown();calcAll();}
 function saveSett(){sett.vat=pf(document.getElementById('s-vat').value)||15;localStorage.setItem('tjc_sett',JSON.stringify(sett));calcAll();}
 
 function applyRateAdj(field){
