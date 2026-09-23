@@ -294,32 +294,10 @@ input:focus,select:focus{outline:none;border-color:var(--primary)}
     <button class="add-bath-btn" onclick="addBath()">＋ Add Bathroom Area</button>
   </div>
 
-  <div class="sec-hdr" onclick="toggleSec('floors')">Other Floor Tiling <span class="sec-chev" id="chev-floors">▾</span></div>
+  <div class="sec-hdr" onclick="toggleSec('floors')">Other Tiling <span class="sec-chev" id="chev-floors">▾</span></div>
   <div class="sec-body" id="sb-floors">
-    <div class="card">
-      <div class="card-header"><div class="card-title"><span class="chip chip-g">🟩</span> Normal Tiles (600×600)</div><button class="btn btn-primary btn-sm" onclick="addFloorPanel('nt')">+ Area</button></div>
-      <div class="panel-labels-nowp"><span>Length (m)</span><span>Width (m)</span><span>m²</span><span></span></div>
-      <div id="panels-nt"></div>
-      <div class="sec-total" id="tot-nt">Total: <strong>0.00 m²</strong></div>
-    </div>
-    <div class="card">
-      <div class="card-header"><div class="card-title"><span class="chip chip-g">🟦</span> Oversized Tiles (1200×600)</div><button class="btn btn-primary btn-sm" onclick="addFloorPanel('ot')">+ Area</button></div>
-      <div class="panel-labels-nowp"><span>Length (m)</span><span>Width (m)</span><span>m²</span><span></span></div>
-      <div id="panels-ot"></div>
-      <div class="sec-total" id="tot-ot">Total: <strong>0.00 m²</strong></div>
-    </div>
-    <div class="card">
-      <div class="card-header"><div class="card-title"><span class="chip chip-o">🟧</span> Subway Tiles</div><button class="btn btn-primary btn-sm" onclick="addFloorPanel('st')">+ Area</button></div>
-      <div class="panel-labels-nowp"><span>Length (m)</span><span>Width (m)</span><span>m²</span><span></span></div>
-      <div id="panels-st"></div>
-      <div class="sec-total" id="tot-st">Total: <strong>0.00 m²</strong></div>
-    </div>
-    <div class="card">
-      <div class="card-header"><div class="card-title"><span class="chip chip-o">🔷</span> Mosaic Tiles</div><button class="btn btn-primary btn-sm" onclick="addFloorPanel('mt')">+ Area</button></div>
-      <div class="panel-labels-nowp"><span>Length (m)</span><span>Width (m)</span><span>m²</span><span></span></div>
-      <div id="panels-mt"></div>
-      <div class="sec-total" id="tot-mt">Total: <strong>0.00 m²</strong></div>
-    </div>
+    <div id="othertile-list"></div>
+    <button class="add-stoep-btn" onclick="addOtherTiling()">＋ Add Tiling Area</button>
   </div>
 
   <div class="sec-hdr" onclick="toggleSec('patio')">Patio <span class="sec-chev" id="chev-patio">▾</span></div>
@@ -609,7 +587,7 @@ const PATIO_TILES = [...BASE_PATIO_TILES];
 const STOEP_TILES = [...BASE_STOEP_TILES];
 const ALUM_OPTIONS= [{value:'none',label:'No aluminium'},{value:'a12',label:'Alum 12mm'},{value:'a10',label:'Alum 10mm'},{value:'a45',label:'Alum 45° Ramp'}];
 
-const FLOOR_SECS  = ['nt','ot','st','mt','pt'];
+const FLOOR_SECS  = ['pt'];
 const LIN_KEYS    = ['a12','a10','a45','skp','skw','sdk','ska'];
 const BASE_TILE_KEYS = ['sw','sf','nt','ot','st','mt','pt'];
 const COMP_KEYS = ['adh','bond','grt','spc'];
@@ -736,7 +714,7 @@ let jobs={}, curId=null, P={}, sett={vat:15}, priceHistory=[];
 let baths=[], panels={}, patioWP=false, patioFrankWP=false, lins={};
 let matSupplied={adh:true,bond:true,grt:true,spc:true};
 let patioTileType='pt', patioA45='';
-let doors=[], stoeps=[];
+let doors=[], stoeps=[], otherTiling=[];
 
 // ── Boot ──
 window.onload = () => {
@@ -820,8 +798,8 @@ function computeQ(){
     add(nfType, panelArea(b.nFloors));
   });
 
-  // Other floor panels (tile type fixed by the card)
-  ['nt','ot','st','mt'].forEach(k=>add(k, floorArea(k)));
+  // Other Tiling (dynamic areas, tile type selectable per area)
+  otherTiling.forEach(o=>add(o.tileType||'nt', panelArea(o.panels)));
 
   // Patio (tile type selectable)
   add(patioTileType||'pt', floorArea('pt'));
@@ -940,7 +918,7 @@ function createJob(){
   jobs[id]={name,client,ts:Date.now(),date:new Date().toISOString().split('T')[0],
     notes:'',baths:[],panels:{},patioWP:false,patioFrankWP:false,lins:{},patioTileType:'pt',patioA45:'',doors:[],stoeps:[],wastage:0,
     invoiced:false,invoicedDate:'',tilerPaid:false,tilerPaidDate:'',
-    matSupplied:{adh:true,bond:true,grt:true,spc:true}};
+    matSupplied:{adh:true,bond:true,grt:true,spc:true},otherTiling:[]};
   saveJobs();rebuildJobSel();closeModal();
   document.getElementById('m-name').value='';document.getElementById('m-client').value='';
   document.getElementById('jobSel').value=id;loadJob(id);
@@ -965,6 +943,7 @@ function loadJob(id){
   patioA45      =j.patioA45            ||'';
   doors         =clone(j.doors         ||[]);
   stoeps        =clone(j.stoeps||[]).map(s=>({...s,panels:(s.panels||[]).map(migratePanel)}));
+  otherTiling   =j.otherTiling ? clone(j.otherTiling).map(o=>({...o,panels:(o.panels||[]).map(migratePanel)})) : migrateOtherTiling(j);
   matSupplied   ={adh:true,bond:true,grt:true,spc:true,...(j.matSupplied||{})};
   renderAllBaths();
   FLOOR_SECS.forEach(k=>renderFloorPanels(k));
@@ -973,7 +952,7 @@ function loadJob(id){
   LIN_KEYS.forEach(k=>{const el=document.getElementById('li-'+k);if(el)el.value=lins[k]||'';});
   document.getElementById('patio-a45').value=patioA45;
   renderPatioTileRow();
-  renderAllDoors();renderAllStoeps();
+  renderAllDoors();renderAllStoeps();renderAllOtherTiling();
   renderStatus();renderMatSupplied();
   updateAutoNotes();calcAll();
 }
@@ -1001,13 +980,13 @@ function migrateBaths(j){
   });
 }
 function clearAll(){
-  baths=[];panels={};patioWP=false;patioFrankWP=false;lins={};patioTileType='pt';patioA45='';doors=[];stoeps=[];
+  baths=[];panels={};patioWP=false;patioFrankWP=false;lins={};patioTileType='pt';patioA45='';doors=[];stoeps=[];otherTiling=[];
   matSupplied={adh:true,bond:true,grt:true,spc:true};
   ['f-name','f-date','f-client','f-notes','f-wastage'].forEach(i=>document.getElementById(i).value='');
   renderAllBaths();FLOOR_SECS.forEach(k=>{panels[k]=[];renderFloorPanels(k);});
   LIN_KEYS.forEach(k=>{const el=document.getElementById('li-'+k);if(el)el.value='';});
   document.getElementById('patio-a45').value='';
-  renderPatioTileRow();renderAllDoors();renderAllStoeps();
+  renderPatioTileRow();renderAllDoors();renderAllStoeps();renderAllOtherTiling();
   renderStatus();renderMatSupplied();
 }
 function renderStatus(){
@@ -1144,7 +1123,7 @@ function autoSave(){
     client:document.getElementById('f-client').value, notes:document.getElementById('f-notes').value,
     wastage:parseInt(document.getElementById('f-wastage').value)||0,
     baths:clone(baths), panels:clone(panels), patioWP, patioFrankWP, lins:clone(lins),
-    patioTileType, patioA45, doors:clone(doors), stoeps:clone(stoeps),
+    patioTileType, patioA45, doors:clone(doors), stoeps:clone(stoeps), otherTiling:clone(otherTiling),
   };
   const opt=document.getElementById('jobSel').querySelector(`option[value="${curId}"]`);
   if(opt)opt.textContent=document.getElementById('f-name').value||curId;
@@ -1616,6 +1595,84 @@ function renderAllStoeps(){
 }
 
 // ═══════════════════════════════════════════════════════
+// OTHER TILING (dynamic areas — Normal/Oversized/Subway/Mosaic)
+// ═══════════════════════════════════════════════════════
+function addOtherTiling(){if(!curId){alert('Please select or create a job first.');return;}otherTiling.push({id:uid(),name:'Tiling Area '+(otherTiling.length+1),panels:[],tileType:'nt'});renderAllOtherTiling();autoSave();document.getElementById('othertile-list').lastElementChild?.scrollIntoView({behavior:'smooth',block:'start'});}
+function removeOtherTiling(oid){if(!confirm('Remove this tiling area?'))return;otherTiling=otherTiling.filter(o=>o.id!==oid);renderAllOtherTiling();autoSave();}
+function renameOtherTiling(oid,val){const o=otherTiling.find(o=>o.id===oid);if(o)o.name=val;autoSave();}
+function addOtherPanel(oid){const o=otherTiling.find(o=>o.id===oid);if(!o)return;o.panels.push({id:uid(),l:'',w:'',direct:false,m2:'',desc:''});renderOtherPanels(oid);autoSave();}
+function removeOtherPanel(oid,pid){const o=otherTiling.find(o=>o.id===oid);if(!o)return;o.panels=o.panels.filter(p=>p.id!==pid);renderOtherPanels(oid);autoSave();}
+function updateOtherPanel(oid,pid,field,val){
+  const o=otherTiling.find(o=>o.id===oid);if(!o)return;const p=o.panels.find(p=>p.id===pid);if(p){p[field]=val;p.direct=false;}
+  const m2el=document.getElementById('ot-m2-'+pid);
+  if(m2el&&p){const a=pf(p.l)*pf(p.w);m2el.value=a>0?a.toFixed(2):'';m2el.classList.remove('direct');}
+  document.getElementById('ot-l-'+pid)?.classList.remove('lw-dim');
+  document.getElementById('ot-w-'+pid)?.classList.remove('lw-dim');
+  updateOtherTotal(oid);autoSave();
+}
+function updateOtherField(oid,field,val){
+  const o=otherTiling.find(o=>o.id===oid);if(!o)return;o[field]=val;
+  if(field==='tileType') renderOtherTileRow(oid);
+  autoSave();
+}
+function renderOtherTileRow(oid){
+  const el=document.getElementById('other-tile-row-'+oid);if(!el)return;
+  const o=otherTiling.find(o=>o.id===oid);if(!o)return;
+  el.innerHTML=`<span class="tile-type-lbl">Tile:</span>`+NF_TILES.map(t=>`<button class="tpill${(o.tileType||'nt')===t.v?' active':''}" onclick="updateOtherField('${oid}','tileType','${t.v}')">${t.l}</button>`).join('');
+}
+function updateOtherTotal(oid){
+  const o=otherTiling.find(o=>o.id===oid);if(!o)return;
+  const el=document.getElementById('other-tot-'+oid);
+  if(el)el.innerHTML=`Total: <strong>${panelArea(o.panels).toFixed(2)} m²</strong>`;
+}
+function updateOtherPanelDesc(oid,pid,val){const o=otherTiling.find(o=>o.id===oid);if(!o)return;const p=o.panels.find(p=>p.id===pid);if(p)p.desc=val;autoSave();}
+function setDirectOther(oid,pid,val){
+  const o=otherTiling.find(o=>o.id===oid);if(!o)return;const r=(o.panels||[]).find(p=>p.id===pid);if(!r)return;
+  _applyDirect(r,val,'ot-m2-'+pid,'ot-l-'+pid,'ot-w-'+pid);
+  updateOtherTotal(oid);autoSave();
+}
+function renderOtherPanels(oid){
+  const o=otherTiling.find(o=>o.id===oid);if(!o)return;
+  const box=document.getElementById('other-panels-'+oid);if(!box)return;
+  if(!o.panels.length){box.innerHTML='<div class="no-item">No areas — tap + Area to add</div>';}
+  else box.innerHTML=o.panels.map(p=>{
+    const a=pf(p.l)*pf(p.w);const disp=p.direct?pf(p.m2||0):a;
+    return `<div class="fp-block"><input class="area-desc" type="text" placeholder="Description (e.g. Passage)" value="${(p.desc||'').replace(/"/g,'&quot;')}" oninput="updateOtherPanelDesc('${oid}','${p.id}',this.value)"><div class="panel-row-nowp"><input id="ot-l-${p.id}" type="number" placeholder="0.00" min="0" step="0.01" value="${p.l||''}" class="${p.direct?'lw-dim':''}" oninput="updateOtherPanel('${oid}','${p.id}','l',this.value)"><input id="ot-w-${p.id}" type="number" placeholder="0.00" min="0" step="0.01" value="${p.w||''}" class="${p.direct?'lw-dim':''}" oninput="updateOtherPanel('${oid}','${p.id}','w',this.value)"><input id="ot-m2-${p.id}" class="m2-inp${p.direct?' direct':''}" type="number" min="0" step="0.01" placeholder="m²" value="${disp>0?disp.toFixed(2):''}" oninput="setDirectOther('${oid}','${p.id}',this.value)"><button class="rmv" onclick="removeOtherPanel('${oid}','${p.id}')">×</button></div></div>`;
+  }).join('');
+  updateOtherTotal(oid);
+}
+function renderAllOtherTiling(){
+  const list=document.getElementById('othertile-list');if(!list)return;
+  if(!otherTiling.length){list.innerHTML='<div class="no-item" style="margin-bottom:10px">No tiling areas — tap ＋ Add Tiling Area below to add one</div>';return;}
+  list.innerHTML='';
+  otherTiling.forEach((o,i)=>{
+    const card=document.createElement('div');card.className='stoep-card';card.id='otcard-'+o.id;
+    card.innerHTML=`
+      <div class="stoep-card-hdr">
+        <div class="stoep-num">${i+1}</div>
+        <input class="stoep-name-input" type="text" value="${o.name}" placeholder="Area name" oninput="renameOtherTiling('${o.id}',this.value)">
+        <button class="bath-del" onclick="removeOtherTiling('${o.id}')">×</button>
+      </div>
+      <div class="bath-sub-hdr">Area<button class="sub-btn" onclick="addOtherPanel('${o.id}')">+ Area</button></div>
+      <div class="tile-type-row" id="other-tile-row-${o.id}"></div>
+      <div class="panel-labels-nowp"><span>Length (m)</span><span>Width (m)</span><span>m²</span><span></span></div>
+      <div id="other-panels-${o.id}"></div>
+      <div class="sec-total" id="other-tot-${o.id}">Total: <strong>0.00 m²</strong></div>`;
+    list.appendChild(card);
+    renderOtherTileRow(o.id);renderOtherPanels(o.id);
+  });
+}
+function migrateOtherTiling(j){
+  const p=j.panels||{};
+  const labels={nt:'Normal Tiles',ot:'Oversized Tiles',st:'Subway Tiles',mt:'Mosaic Tiles'};
+  const out=[];
+  ['nt','ot','st','mt'].forEach(k=>{
+    if((p[k]||[]).length) out.push({id:uid(),name:labels[k],tileType:k,panels:p[k].map(migratePanel)});
+  });
+  return out;
+}
+
+// ═══════════════════════════════════════════════════════
 // FLOOR PANELS (outside bathroom)
 // ═══════════════════════════════════════════════════════
 function addFloorPanel(sec){if(!curId){alert('Please select or create a job first.');return;}if(!panels[sec])panels[sec]=[];panels[sec].push({id:uid(),l:'',w:'',direct:false,m2:'',desc:''});renderFloorPanels(sec);autoSave();}
@@ -1738,7 +1795,7 @@ function computeQDetailed(){
     const nfType=b.nFloorType||'nt';
     (b.nFloors||[]).forEach((f,i)=>{const a=panelArea([f]);if(a>0)add(nfType,f.desc||(b.name+(b.nFloors.length>1?' — Floor '+(i+1):' — Floor')),a);});
   });
-  ['nt','ot','st','mt'].forEach(k=>{(panels[k]||[]).forEach((r,i)=>{const a=panelArea([r]);if(a>0)add(k,r.desc||('Area '+(i+1)),a);});});
+  otherTiling.forEach(o=>{(o.panels||[]).forEach((p,i)=>{const a=panelArea([p]);if(a>0)add(o.tileType||'nt',(o.name||'Tiling Area')+(p.desc?' — '+p.desc:(o.panels.length>1?' — '+(i+1):'')),a);});});
   (panels.pt||[]).forEach((r,i)=>{const a=panelArea([r]);if(a>0)add(patioTileType||'pt',r.desc||('Patio '+(i+1)),a);});
   stoeps.forEach(s=>{(s.panels||[]).forEach((p,i)=>{const a=panelArea([p]);if(a>0)add(s.tileType||'nt',(s.name||'Stoep')+(p.desc?' — '+p.desc:(s.panels.length>1?' — '+(i+1):'')),a);});});
   baths.forEach(b=>{
