@@ -274,6 +274,7 @@ input:focus,select:focus{outline:none;border-color:var(--primary)}
 <div class="tabs">
   <div class="tab active" onclick="switchTab('meas')">📐 Measure</div>
   <div class="tab" onclick="switchTab('summ')">📊 Summary</div>
+  <div class="tab" onclick="switchTab('client')">👁 Client View</div>
   <div class="tab" onclick="switchTab('pric')">💰 Prices</div>
 </div>
 
@@ -419,6 +420,30 @@ input:focus,select:focus{outline:none;border-color:var(--primary)}
         <tr class="foot-sub"><td colspan="3">Subtotal (excl. VAT)</td><td id="inv-sub">R0.00</td></tr>
         <tr class="foot-sub"><td colspan="3">VAT (<span id="vat-pct">15</span>%)</td><td id="inv-vat">R0.00</td></tr>
         <tr class="foot-total"><td colspan="3">TOTAL (incl. VAT)</td><td id="inv-tot">R0.00</td></tr>
+      </tfoot>
+    </table>
+  </div>
+</div>
+
+<!-- ══ CLIENT VIEW (safe to show on-site — no cost/profit/tiler pay) ══ -->
+<div id="tab-client" class="tab-panel">
+  <div class="card">
+    <div class="card-header"><div class="card-title"><span class="chip chip-b">🧪</span> Materials Supplied</div></div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:8px">Switch off anything the client is supplying themselves for this job.</div>
+    <div class="tog-row"><div class="tog-info"><div class="tlabel">Adhesive</div></div><div class="toggle" id="tog-cms-adh" onclick="toggleMatSupplied('adh')"></div></div>
+    <div class="tog-row"><div class="tog-info"><div class="tlabel">Bonding Liquid</div></div><div class="toggle" id="tog-cms-bond" onclick="toggleMatSupplied('bond')"></div></div>
+    <div class="tog-row"><div class="tog-info"><div class="tlabel">Grout</div></div><div class="toggle" id="tog-cms-grt" onclick="toggleMatSupplied('grt')"></div></div>
+    <div class="tog-row"><div class="tog-info"><div class="tlabel">Spacers</div></div><div class="toggle" id="tog-cms-spc" onclick="toggleMatSupplied('spc')"></div></div>
+  </div>
+  <div class="card">
+    <div class="card-header"><div class="card-title"><span class="chip chip-g">📄</span> Invoice Details</div><button class="btn btn-ghost btn-sm" onclick="copyInvoice()">📋 Copy</button></div>
+    <table class="stbl">
+      <thead><tr><th>Item</th><th>Qty</th><th>Rate</th><th>Amount</th></tr></thead>
+      <tbody id="c-inv-body"></tbody>
+      <tfoot>
+        <tr class="foot-sub"><td colspan="3">Subtotal (excl. VAT)</td><td id="c-inv-sub">R0.00</td></tr>
+        <tr class="foot-sub"><td colspan="3">VAT (<span id="c-vat-pct">15</span>%)</td><td id="c-inv-vat">R0.00</td></tr>
+        <tr class="foot-total"><td colspan="3">TOTAL (incl. VAT)</td><td id="c-inv-tot">R0.00</td></tr>
       </tfoot>
     </table>
   </div>
@@ -702,6 +727,8 @@ function renderMatSupplied(){
   COMP_KEYS.forEach(c=>{
     const el=document.getElementById('tog-ms-'+c);
     if(el) el.classList.toggle('on',matSupplied[c]!==false);
+    const cel=document.getElementById('tog-cms-'+c);
+    if(cel) cel.classList.toggle('on',matSupplied[c]!==false);
   });
 }
 
@@ -721,7 +748,7 @@ let matSupplied={adh:true,bond:true,grt:true,spc:true};
 let patioTileType='pt', patioA45='';
 let doors=[], stoeps=[], otherTiling=[];
 
-const APP_VERSION='2026.10.06-4';
+const APP_VERSION='2026.10.06-5';
 
 // ── Boot ──
 window.onload = () => {
@@ -1898,6 +1925,11 @@ function calcAll(){
   document.getElementById('inv-vat').textContent  =fmt(va);
   document.getElementById('inv-tot').textContent  =fmt(it);
   document.getElementById('vat-pct').textContent  =sett.vat;
+  renderInvTbl('c-inv-body',ir,computeQDetailed());
+  document.getElementById('c-inv-sub').textContent=fmt(is);
+  document.getElementById('c-inv-vat').textContent=fmt(va);
+  document.getElementById('c-inv-tot').textContent=fmt(it);
+  document.getElementById('c-vat-pct').textContent=sett.vat;
 }
 
 function renderTbl(id,rows,type){
@@ -2040,11 +2072,11 @@ function renderCostBreakdown(){
 }
 
 function switchTab(t){
-  ['meas','summ','pric'].forEach((id,i)=>{
+  ['meas','summ','client','pric'].forEach((id,i)=>{
     document.getElementById('tab-'+id).classList.toggle('active',id===t);
     document.querySelectorAll('.tab')[i].classList.toggle('active',id===t);
   });
-  if(t==='summ')calcAll();
+  if(t==='summ'||t==='client'){calcAll();renderMatSupplied();}
 }
 
 function copyInvoice(){
