@@ -676,7 +676,9 @@ function updComp(key,comp,val){
   if(!P[key])return; if(!P[key].comp)P[key].comp={adh:0,bond:0,grt:0,spc:0};
   P[key].comp[comp]=pf(val);
   localStorage.setItem('tjc_prices',JSON.stringify(P));
-  renderMatComponents();renderCostBreakdown();calcAll();
+  const p=P[key],otherEl=document.getElementById('mcomp-other-'+key);
+  if(otherEl){const other=Math.max(0,p.mat-COMP_KEYS.reduce((s,c)=>s+(p.comp[c]||0),0));otherEl.textContent=fmt(other);}
+  renderCostBreakdown();calcAll();
 }
 function renderMatComponents(){
   const tb=document.getElementById('mcomp-body');if(!tb)return;
@@ -685,8 +687,8 @@ function renderMatComponents(){
     const p=P[k],comp=p.comp||{adh:0,bond:0,grt:0,spc:0};
     const other=Math.max(0,p.mat-COMP_KEYS.reduce((s,c)=>s+(comp[c]||0),0));
     return `<tr><td style="font-size:11px;max-width:100px">${p.label}</td>`+
-      COMP_KEYS.map(c=>`<td><input type="number" min="0" step="0.01" value="${(comp[c]||0).toFixed(2)}" oninput="updComp('${k}','${c}',this.value)"></td>`).join('')+
-      `<td style="font-size:11px;color:var(--muted)">${fmt(other)}</td></tr>`;
+      COMP_KEYS.map(c=>`<td><input type="number" min="0" step="0.01" value="${(comp[c]||0).toFixed(2)}" oninput="updComp('${k}','${c}',this.value)" onchange="renderMatComponents()"></td>`).join('')+
+      `<td style="font-size:11px;color:var(--muted)" id="mcomp-other-${k}">${fmt(other)}</td></tr>`;
   }).join('');
 }
 function toggleMatSupplied(comp){
@@ -718,7 +720,7 @@ let matSupplied={adh:true,bond:true,grt:true,spc:true};
 let patioTileType='pt', patioA45='';
 let doors=[], stoeps=[], otherTiling=[];
 
-const APP_VERSION='2026.10.06-1';
+const APP_VERSION='2026.10.06-2';
 
 // ── Boot ──
 window.onload = () => {
@@ -1892,12 +1894,17 @@ function renderPriceTable(){
       if(!P[key])return;const p=P[key],profit=p.inv-p.frank-p.mat;
       const isCustom=customTiles.some(c=>c.key===key);
       const delCell=isCustom?`<button class="rmv" title="Delete custom tile type" onclick="deleteCustomTile('${key}')">×</button>`:'';
-      html+=`<tr><td style="font-size:11px;max-width:110px">${p.label}</td><td style="font-size:11px;color:var(--muted)">${p.unit}</td><td><input type="number" min="0" step="0.01" value="${p.frank.toFixed(2)}" oninput="updPrice('${key}','frank',this.value)"></td><td><input type="number" min="0" step="0.01" value="${p.inv.toFixed(2)}" oninput="updPrice('${key}','inv',this.value)"></td><td><span class="profit-pill">${fmt(profit)}</span></td><td>${delCell}</td></tr>`;
+      html+=`<tr><td style="font-size:11px;max-width:110px">${p.label}</td><td style="font-size:11px;color:var(--muted)">${p.unit}</td><td><input type="number" min="0" step="0.01" value="${p.frank.toFixed(2)}" oninput="updPrice('${key}','frank',this.value)" onchange="renderPriceTable()"></td><td><input type="number" min="0" step="0.01" value="${p.inv.toFixed(2)}" oninput="updPrice('${key}','inv',this.value)" onchange="renderPriceTable()"></td><td><span class="profit-pill" id="profit-${key}">${fmt(profit)}</span></td><td>${delCell}</td></tr>`;
     });
   });
   tb.innerHTML=html;
 }
-function updPrice(key,field,val){if(!P[key])return;P[key][field]=pf(val);renderPriceTable();renderCostBreakdown();localStorage.setItem('tjc_prices',JSON.stringify(P));calcAll();}
+function updPrice(key,field,val){
+  if(!P[key])return;P[key][field]=pf(val);
+  const p=P[key],el=document.getElementById('profit-'+key);
+  if(el)el.textContent=fmt(p.inv-p.frank-p.mat);
+  renderCostBreakdown();localStorage.setItem('tjc_prices',JSON.stringify(P));calcAll();
+}
 function resetPrices(){if(!confirm('Reset built-in prices to the 2026 defaults? (Your custom tile types keep their current rates.)'))return;Object.keys(DP).forEach(k=>P[k]=clone(DP[k]));localStorage.setItem('tjc_prices',JSON.stringify(P));renderPriceTable();renderCostBreakdown();calcAll();}
 function saveSett(){sett.vat=pf(document.getElementById('s-vat').value)||15;localStorage.setItem('tjc_sett',JSON.stringify(sett));calcAll();}
 
