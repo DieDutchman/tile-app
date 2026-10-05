@@ -721,7 +721,7 @@ let matSupplied={adh:true,bond:true,grt:true,spc:true};
 let patioTileType='pt', patioA45='';
 let doors=[], stoeps=[], otherTiling=[];
 
-const APP_VERSION='2026.10.06-3';
+const APP_VERSION='2026.10.06-4';
 
 // ── Boot ──
 window.onload = () => {
@@ -1364,13 +1364,22 @@ function updateNFloor(bid,pid,field,val){
   document.getElementById('nf-w-'+pid)?.classList.remove('lw-dim');
   refreshBathTotals(bid);autoSave();
 }
+let nfDescOpen=new Set();
+function toggleNFDesc(bid,pid){nfDescOpen.add(pid);renderNFloors(bid);document.getElementById('nf-desc-'+pid)?.focus();}
+function collapseNFDescIfEmpty(bid,pid){
+  const b=getBath(bid);if(!b)return;const r=(b.nFloors||[]).find(r=>r.id===pid);
+  if(r&&!r.desc){nfDescOpen.delete(pid);renderNFloors(bid);}
+}
 function renderNFloors(bid){
   const b=getBath(bid);if(!b)return;
   const box=document.getElementById('nf-box-'+bid);if(!box)return;
   if(!b.nFloors.length){box.innerHTML='<div class="no-item">No panels — tap + to add</div>';}
   else box.innerHTML=b.nFloors.map(r=>{
     const a=pf(r.l)*pf(r.w);const disp=r.direct?pf(r.m2||0):a;
-    return `<div class="fp-block"><input class="area-desc" type="text" placeholder="Description (e.g. Bathroom floor)" value="${(r.desc||'').replace(/"/g,'&quot;')}" oninput="updateNFloorDesc('${bid}','${r.id}',this.value)"><div class="panel-row-nowp"><input id="nf-l-${r.id}" type="number" placeholder="0.00" min="0" step="0.01" value="${r.l||''}" class="${r.direct?'lw-dim':''}" oninput="updateNFloor('${bid}','${r.id}','l',this.value)"><input id="nf-w-${r.id}" type="number" placeholder="0.00" min="0" step="0.01" value="${r.w||''}" class="${r.direct?'lw-dim':''}" oninput="updateNFloor('${bid}','${r.id}','w',this.value)"><input id="nf-m2-${r.id}" class="m2-inp${r.direct?' direct':''}" type="number" min="0" step="0.01" placeholder="m²" value="${disp>0?disp.toFixed(2):''}" oninput="setDirectNF('${bid}','${r.id}',this.value)"><button class="rmv" onclick="removeNFloor('${bid}','${r.id}')">×</button></div></div>`;
+    const descHtml=(r.desc||nfDescOpen.has(r.id))
+      ?`<input id="nf-desc-${r.id}" class="area-desc" type="text" placeholder="Description (e.g. Bathroom floor)" value="${(r.desc||'').replace(/"/g,'&quot;')}" oninput="updateNFloorDesc('${bid}','${r.id}',this.value)" onblur="collapseNFDescIfEmpty('${bid}','${r.id}')">`
+      :`<button type="button" class="add-note-btn" onclick="toggleNFDesc('${bid}','${r.id}')">+ Note</button>`;
+    return `<div class="fp-block">${descHtml}<div class="panel-row-nowp"><input id="nf-l-${r.id}" type="number" placeholder="0.00" min="0" step="0.01" value="${r.l||''}" class="${r.direct?'lw-dim':''}" oninput="updateNFloor('${bid}','${r.id}','l',this.value)"><input id="nf-w-${r.id}" type="number" placeholder="0.00" min="0" step="0.01" value="${r.w||''}" class="${r.direct?'lw-dim':''}" oninput="updateNFloor('${bid}','${r.id}','w',this.value)"><input id="nf-m2-${r.id}" class="m2-inp${r.direct?' direct':''}" type="number" min="0" step="0.01" placeholder="m²" value="${disp>0?disp.toFixed(2):''}" oninput="setDirectNF('${bid}','${r.id}',this.value)"><button class="rmv" onclick="removeNFloor('${bid}','${r.id}')">×</button></div></div>`;
   }).join('');
   refreshBathTotals(bid);
 }
@@ -1562,13 +1571,22 @@ function updateStoepTotal(sid){
   const el=document.getElementById('stoep-tot-'+sid);
   if(el)el.innerHTML=`Total: <strong>${panelArea(s.panels).toFixed(2)} m²</strong>`;
 }
+let stoepDescOpen=new Set();
+function toggleStoepDesc(sid,pid){stoepDescOpen.add(pid);renderStoepPanels(sid);document.getElementById('st-desc-'+pid)?.focus();}
+function collapseStoepDescIfEmpty(sid,pid){
+  const s=stoeps.find(s=>s.id===sid);if(!s)return;const p=s.panels.find(p=>p.id===pid);
+  if(p&&!p.desc){stoepDescOpen.delete(pid);renderStoepPanels(sid);}
+}
 function renderStoepPanels(sid){
   const s=stoeps.find(s=>s.id===sid);if(!s)return;
   const box=document.getElementById('stoep-panels-'+sid);if(!box)return;
   if(!s.panels.length){box.innerHTML='<div class="no-item">No areas — tap + Area to add</div>';}
   else box.innerHTML=s.panels.map(p=>{
     const a=pf(p.l)*pf(p.w);const disp=p.direct?pf(p.m2||0):a;
-    return `<div class="fp-block"><input class="area-desc" type="text" placeholder="Description (e.g. Front stoep)" value="${(p.desc||'').replace(/"/g,'&quot;')}" oninput="updateStoepPanelDesc('${sid}','${p.id}',this.value)"><div class="panel-row-nowp"><input id="st-l-${p.id}" type="number" placeholder="0.00" min="0" step="0.01" value="${p.l||''}" class="${p.direct?'lw-dim':''}" oninput="updateStoepPanel('${sid}','${p.id}','l',this.value)"><input id="st-w-${p.id}" type="number" placeholder="0.00" min="0" step="0.01" value="${p.w||''}" class="${p.direct?'lw-dim':''}" oninput="updateStoepPanel('${sid}','${p.id}','w',this.value)"><input id="st-m2-${p.id}" class="m2-inp${p.direct?' direct':''}" type="number" min="0" step="0.01" placeholder="m²" value="${disp>0?disp.toFixed(2):''}" oninput="setDirectStoep('${sid}','${p.id}',this.value)"><button class="rmv" onclick="removeStoepPanel('${sid}','${p.id}')">×</button></div></div>`;
+    const descHtml=(p.desc||stoepDescOpen.has(p.id))
+      ?`<input id="st-desc-${p.id}" class="area-desc" type="text" placeholder="Description (e.g. Front stoep)" value="${(p.desc||'').replace(/"/g,'&quot;')}" oninput="updateStoepPanelDesc('${sid}','${p.id}',this.value)" onblur="collapseStoepDescIfEmpty('${sid}','${p.id}')">`
+      :`<button type="button" class="add-note-btn" onclick="toggleStoepDesc('${sid}','${p.id}')">+ Note</button>`;
+    return `<div class="fp-block">${descHtml}<div class="panel-row-nowp"><input id="st-l-${p.id}" type="number" placeholder="0.00" min="0" step="0.01" value="${p.l||''}" class="${p.direct?'lw-dim':''}" oninput="updateStoepPanel('${sid}','${p.id}','l',this.value)"><input id="st-w-${p.id}" type="number" placeholder="0.00" min="0" step="0.01" value="${p.w||''}" class="${p.direct?'lw-dim':''}" oninput="updateStoepPanel('${sid}','${p.id}','w',this.value)"><input id="st-m2-${p.id}" class="m2-inp${p.direct?' direct':''}" type="number" min="0" step="0.01" placeholder="m²" value="${disp>0?disp.toFixed(2):''}" oninput="setDirectStoep('${sid}','${p.id}',this.value)"><button class="rmv" onclick="removeStoepPanel('${sid}','${p.id}')">×</button></div></div>`;
   }).join('');
   updateStoepTotal(sid);
 }
@@ -1719,12 +1737,21 @@ function upFloorPanel(sec,id,field,val){
   const el=document.getElementById('tot-'+sec);if(el)el.innerHTML=`Total: <strong>${floorArea(sec).toFixed(2)} m²</strong>`;
   autoSave();
 }
+let fpDescOpen=new Set();
+function toggleFPDesc(sec,id){fpDescOpen.add(id);renderFloorPanels(sec);document.getElementById('fp-desc-'+id)?.focus();}
+function collapseFPDescIfEmpty(sec,id){
+  const r=(panels[sec]||[]).find(r=>r.id===id);
+  if(r&&!r.desc){fpDescOpen.delete(id);renderFloorPanels(sec);}
+}
 function renderFloorPanels(sec){
   const box=document.getElementById('panels-'+sec);if(!box)return;box.innerHTML='';
   (panels[sec]||[]).forEach(r=>{
     const a=pf(r.l)*pf(r.w);const disp=r.direct?pf(r.m2||0):a;
     const d=document.createElement('div');d.className='fp-block';d.id='fp-'+r.id;
-    d.innerHTML=`<input class="area-desc" type="text" placeholder="Description (e.g. Lounge)" value="${(r.desc||'').replace(/"/g,'&quot;')}" oninput="upFloorPanelDesc('${sec}','${r.id}',this.value)"><div class="panel-row-nowp"><input id="fp-l-${r.id}" type="number" placeholder="0.00" min="0" step="0.01" value="${r.l||''}" class="${r.direct?'lw-dim':''}" oninput="upFloorPanel('${sec}','${r.id}','l',this.value)"><input id="fp-w-${r.id}" type="number" placeholder="0.00" min="0" step="0.01" value="${r.w||''}" class="${r.direct?'lw-dim':''}" oninput="upFloorPanel('${sec}','${r.id}','w',this.value)"><input id="fp-m2-${r.id}" class="m2-inp${r.direct?' direct':''}" type="number" min="0" step="0.01" placeholder="m²" value="${disp>0?disp.toFixed(2):''}" oninput="setDirectFP('${sec}','${r.id}',this.value)"><button class="rmv" onclick="rmFloorPanel('${sec}','${r.id}')">×</button></div>`;
+    const descHtml=(r.desc||fpDescOpen.has(r.id))
+      ?`<input id="fp-desc-${r.id}" class="area-desc" type="text" placeholder="Description (e.g. Lounge)" value="${(r.desc||'').replace(/"/g,'&quot;')}" oninput="upFloorPanelDesc('${sec}','${r.id}',this.value)" onblur="collapseFPDescIfEmpty('${sec}','${r.id}')">`
+      :`<button type="button" class="add-note-btn" onclick="toggleFPDesc('${sec}','${r.id}')">+ Note</button>`;
+    d.innerHTML=`${descHtml}<div class="panel-row-nowp"><input id="fp-l-${r.id}" type="number" placeholder="0.00" min="0" step="0.01" value="${r.l||''}" class="${r.direct?'lw-dim':''}" oninput="upFloorPanel('${sec}','${r.id}','l',this.value)"><input id="fp-w-${r.id}" type="number" placeholder="0.00" min="0" step="0.01" value="${r.w||''}" class="${r.direct?'lw-dim':''}" oninput="upFloorPanel('${sec}','${r.id}','w',this.value)"><input id="fp-m2-${r.id}" class="m2-inp${r.direct?' direct':''}" type="number" min="0" step="0.01" placeholder="m²" value="${disp>0?disp.toFixed(2):''}" oninput="setDirectFP('${sec}','${r.id}',this.value)"><button class="rmv" onclick="rmFloorPanel('${sec}','${r.id}')">×</button></div>`;
     box.appendChild(d);
   });
   const el=document.getElementById('tot-'+sec);if(el)el.innerHTML=`Total: <strong>${floorArea(sec).toFixed(2)} m²</strong>`;
