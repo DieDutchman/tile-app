@@ -135,6 +135,7 @@ input:focus,select:focus{outline:none;border-color:var(--primary)}
 .wp-note strong{font-family:'DM Mono',monospace}
 .no-item{font-size:12px;color:var(--muted);padding:4px 0;font-style:italic}
 .area-desc{width:100%;border:none;border-bottom:1px dashed var(--border);background:transparent;font-size:11px;color:var(--muted);padding:2px 0 3px;margin-bottom:4px;font-family:inherit;outline:none}
+.add-note-btn{border:none;background:none;color:var(--muted);font-size:10px;padding:0;margin-bottom:3px;text-decoration:underline;font-family:inherit}
 .area-desc:focus{border-bottom-color:var(--primary);color:var(--dark)}
 .area-desc::placeholder{color:#C8C8C8}
 .fp-block{margin-bottom:5px}.fp-block .panel-row-nowp{margin-bottom:0}
@@ -720,7 +721,7 @@ let matSupplied={adh:true,bond:true,grt:true,spc:true};
 let patioTileType='pt', patioA45='';
 let doors=[], stoeps=[], otherTiling=[];
 
-const APP_VERSION='2026.10.06-2';
+const APP_VERSION='2026.10.06-3';
 
 // ── Boot ──
 window.onload = () => {
@@ -1653,13 +1654,22 @@ function setDirectOther(oid,pid,val){
   _applyDirect(r,val,'ot-m2-'+pid,'ot-l-'+pid,'ot-w-'+pid);
   updateOtherTotal(oid);autoSave();
 }
+let otherDescOpen=new Set();
+function toggleOtherDesc(oid,pid){otherDescOpen.add(pid);renderOtherPanels(oid);document.getElementById('ot-desc-'+pid)?.focus();}
+function collapseOtherDescIfEmpty(oid,pid){
+  const o=otherTiling.find(o=>o.id===oid);if(!o)return;const p=o.panels.find(p=>p.id===pid);
+  if(p&&!p.desc){otherDescOpen.delete(pid);renderOtherPanels(oid);}
+}
 function renderOtherPanels(oid){
   const o=otherTiling.find(o=>o.id===oid);if(!o)return;
   const box=document.getElementById('other-panels-'+oid);if(!box)return;
   if(!o.panels.length){box.innerHTML='<div class="no-item">No areas — tap + Area to add</div>';}
   else box.innerHTML=o.panels.map(p=>{
     const a=pf(p.l)*pf(p.w);const disp=p.direct?pf(p.m2||0):a;
-    return `<div class="fp-block"><input class="area-desc" type="text" placeholder="Description (e.g. Passage)" value="${(p.desc||'').replace(/"/g,'&quot;')}" oninput="updateOtherPanelDesc('${oid}','${p.id}',this.value)"><div class="panel-row-nowp"><input id="ot-l-${p.id}" type="number" placeholder="0.00" min="0" step="0.01" value="${p.l||''}" class="${p.direct?'lw-dim':''}" oninput="updateOtherPanel('${oid}','${p.id}','l',this.value)"><input id="ot-w-${p.id}" type="number" placeholder="0.00" min="0" step="0.01" value="${p.w||''}" class="${p.direct?'lw-dim':''}" oninput="updateOtherPanel('${oid}','${p.id}','w',this.value)"><input id="ot-m2-${p.id}" class="m2-inp${p.direct?' direct':''}" type="number" min="0" step="0.01" placeholder="m²" value="${disp>0?disp.toFixed(2):''}" oninput="setDirectOther('${oid}','${p.id}',this.value)"><button class="rmv" onclick="removeOtherPanel('${oid}','${p.id}')">×</button></div></div>`;
+    const descHtml=(p.desc||otherDescOpen.has(p.id))
+      ?`<input id="ot-desc-${p.id}" class="area-desc" type="text" placeholder="Description (e.g. Passage)" value="${(p.desc||'').replace(/"/g,'&quot;')}" oninput="updateOtherPanelDesc('${oid}','${p.id}',this.value)" onblur="collapseOtherDescIfEmpty('${oid}','${p.id}')">`
+      :`<button type="button" class="add-note-btn" onclick="toggleOtherDesc('${oid}','${p.id}')">+ Note</button>`;
+    return `<div class="fp-block">${descHtml}<div class="panel-row-nowp"><input id="ot-l-${p.id}" type="number" placeholder="0.00" min="0" step="0.01" value="${p.l||''}" class="${p.direct?'lw-dim':''}" oninput="updateOtherPanel('${oid}','${p.id}','l',this.value)"><input id="ot-w-${p.id}" type="number" placeholder="0.00" min="0" step="0.01" value="${p.w||''}" class="${p.direct?'lw-dim':''}" oninput="updateOtherPanel('${oid}','${p.id}','w',this.value)"><input id="ot-m2-${p.id}" class="m2-inp${p.direct?' direct':''}" type="number" min="0" step="0.01" placeholder="m²" value="${disp>0?disp.toFixed(2):''}" oninput="setDirectOther('${oid}','${p.id}',this.value)"><button class="rmv" onclick="removeOtherPanel('${oid}','${p.id}')">×</button></div></div>`;
   }).join('');
   updateOtherTotal(oid);
 }
