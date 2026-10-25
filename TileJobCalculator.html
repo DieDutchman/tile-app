@@ -396,6 +396,7 @@ input:focus,select:focus{outline:none;border-color:var(--primary)}
     <div class="tog-row"><div class="tog-info"><div class="tlabel">Bonding Liquid</div></div><div class="toggle" id="tog-ms-bond" onclick="toggleMatSupplied('bond')"></div></div>
     <div class="tog-row"><div class="tog-info"><div class="tlabel">Grout</div></div><div class="toggle" id="tog-ms-grt" onclick="toggleMatSupplied('grt')"></div></div>
     <div class="tog-row"><div class="tog-info"><div class="tlabel">Spacers</div></div><div class="toggle" id="tog-ms-spc" onclick="toggleMatSupplied('spc')"></div></div>
+    <div class="tog-row"><div class="tog-info"><div class="tlabel">Aluminium</div></div><div class="toggle" id="tog-ms-alu" onclick="toggleMatSupplied('alu')"></div></div>
   </div>
   <div class="stats">
     <div class="stat"><div class="stat-label">Invoice excl. VAT</div><div class="stat-val blue" id="st-inv">R0.00</div></div>
@@ -434,6 +435,7 @@ input:focus,select:focus{outline:none;border-color:var(--primary)}
     <div class="tog-row"><div class="tog-info"><div class="tlabel">Bonding Liquid</div></div><div class="toggle" id="tog-cms-bond" onclick="toggleMatSupplied('bond')"></div></div>
     <div class="tog-row"><div class="tog-info"><div class="tlabel">Grout</div></div><div class="toggle" id="tog-cms-grt" onclick="toggleMatSupplied('grt')"></div></div>
     <div class="tog-row"><div class="tog-info"><div class="tlabel">Spacers</div></div><div class="toggle" id="tog-cms-spc" onclick="toggleMatSupplied('spc')"></div></div>
+    <div class="tog-row"><div class="tog-info"><div class="tlabel">Aluminium</div></div><div class="toggle" id="tog-cms-alu" onclick="toggleMatSupplied('alu')"></div></div>
   </div>
   <div class="card">
     <div class="card-header"><div class="card-title"><span class="chip chip-g">📄</span> Invoice Details</div><button class="btn btn-ghost btn-sm" onclick="copyInvoice()">📋 Copy</button></div>
@@ -620,6 +622,8 @@ const LIN_KEYS    = ['a12','a10','a45','skp','skw','sdk','ska'];
 const BASE_TILE_KEYS = ['sw','sf','nt','ot','st','mt','pt'];
 const COMP_KEYS = ['adh','bond','grt','spc'];
 const COMP_LABELS = {adh:'Adhesive',bond:'Bonding Liquid',grt:'Grout',spc:'Spacers'};
+const SUPPLY_KEYS = [...COMP_KEYS,'alu'];
+const ALUM_KEYS = ['a12','a10','a45'];
 
 // Custom tile types (user-added via Prices tab). {key,label,areas:['wall'|'sf'|'nf'|'patio'|'stoep',...]}
 const CUSTOM_AREA_DEFS = [
@@ -696,8 +700,12 @@ function excludedCompCost(key){
   const comp=(P[key]&&P[key].comp)||null; if(!comp) return 0;
   return COMP_KEYS.reduce((s,c)=> s + (matSupplied[c]===false ? (comp[c]||0) : 0), 0);
 }
-function effMat(key){ return (P[key]?P[key].mat:0) - excludedCompCost(key); }
-function effInv(key){ return (P[key]?P[key].inv:0) - excludedCompCost(key); }
+function excludedAluCost(key){
+  if(!ALUM_KEYS.includes(key) || matSupplied.alu!==false) return 0;
+  return P[key]?P[key].mat:0;
+}
+function effMat(key){ return (P[key]?P[key].mat:0) - excludedCompCost(key) - excludedAluCost(key); }
+function effInv(key){ return (P[key]?P[key].inv:0) - excludedCompCost(key) - excludedAluCost(key); }
 function updComp(key,comp,val){
   if(!P[key])return; if(!P[key].comp)P[key].comp={adh:0,bond:0,grt:0,spc:0};
   P[key].comp[comp]=pf(val);
@@ -724,7 +732,7 @@ function toggleMatSupplied(comp){
   saveJobs();renderMatSupplied();renderCostBreakdown();calcAll();
 }
 function renderMatSupplied(){
-  COMP_KEYS.forEach(c=>{
+  SUPPLY_KEYS.forEach(c=>{
     const el=document.getElementById('tog-ms-'+c);
     if(el) el.classList.toggle('on',matSupplied[c]!==false);
     const cel=document.getElementById('tog-cms-'+c);
@@ -744,11 +752,11 @@ function renderMatSupplied(){
 // ═══════════════════════════════════════════════════════
 let jobs={}, curId=null, P={}, sett={vat:15}, priceHistory=[];
 let baths=[], panels={}, patioWP=false, patioFrankWP=false, lins={};
-let matSupplied={adh:true,bond:true,grt:true,spc:true};
+let matSupplied={adh:true,bond:true,grt:true,spc:true,alu:true};
 let patioTileType='pt', patioA45='';
 let doors=[], stoeps=[], otherTiling=[];
 
-const APP_VERSION='2026.10.06-5';
+const APP_VERSION='2026.10.25-1';
 
 // ── Boot ──
 window.onload = () => {
@@ -922,7 +930,8 @@ function buildInvoiceLines(Q){
   // Profiles
   ['a12','a10','a45','ska'].forEach(k=>{
     if(!Q[k]||!P[k]) return;
-    lines.push({key:k, label:P[k].label, qty:Q[k], unit:'m', rate:P[k].inv, amt:Q[k]*P[k].inv});
+    const rate=effInv(k);
+    lines.push({key:k, label:P[k].label, qty:Q[k], unit:'m', rate, amt:Q[k]*rate});
   });
 
   // Feature items
@@ -954,7 +963,7 @@ function createJob(){
   jobs[id]={name,client,ts:Date.now(),date:new Date().toISOString().split('T')[0],
     notes:'',baths:[],panels:{},patioWP:false,patioFrankWP:false,lins:{},patioTileType:'pt',patioA45:'',doors:[],stoeps:[],wastage:0,
     invoiced:false,invoicedDate:'',tilerPaid:false,tilerPaidDate:'',
-    matSupplied:{adh:true,bond:true,grt:true,spc:true},otherTiling:[]};
+    matSupplied:{adh:true,bond:true,grt:true,spc:true,alu:true},otherTiling:[]};
   saveJobs();rebuildJobSel();closeModal();
   document.getElementById('m-name').value='';document.getElementById('m-client').value='';
   document.getElementById('jobSel').value=id;loadJob(id);
@@ -980,7 +989,7 @@ function loadJob(id){
   doors         =clone(j.doors         ||[]);
   stoeps        =clone(j.stoeps||[]).map(s=>({...s,panels:(s.panels||[]).map(migratePanel)}));
   otherTiling   =j.otherTiling ? clone(j.otherTiling).map(o=>({...o,panels:(o.panels||[]).map(migratePanel)})) : migrateOtherTiling(j);
-  matSupplied   ={adh:true,bond:true,grt:true,spc:true,...(j.matSupplied||{})};
+  matSupplied   ={adh:true,bond:true,grt:true,spc:true,alu:true,...(j.matSupplied||{})};
   renderAllBaths();
   FLOOR_SECS.forEach(k=>renderFloorPanels(k));
   document.getElementById('tog-wpp').classList.toggle('on',patioWP);
@@ -1017,7 +1026,7 @@ function migrateBaths(j){
 }
 function clearAll(){
   baths=[];panels={};patioWP=false;patioFrankWP=false;lins={};patioTileType='pt';patioA45='';doors=[];stoeps=[];otherTiling=[];
-  matSupplied={adh:true,bond:true,grt:true,spc:true};
+  matSupplied={adh:true,bond:true,grt:true,spc:true,alu:true};
   ['f-name','f-date','f-client','f-notes','f-wastage'].forEach(i=>document.getElementById(i).value='');
   renderAllBaths();FLOOR_SECS.forEach(k=>{panels[k]=[];renderFloorPanels(k);});
   LIN_KEYS.forEach(k=>{const el=document.getElementById('li-'+k);if(el)el.value='';});
@@ -2056,7 +2065,7 @@ function renderCostBreakdown(){
       const profit=inv-cost;
       const margin=inv>0?(profit/inv*100):0;
       const mColor=margin>=0?'var(--green)':'var(--red)';
-      const excl=excludedCompCost(k);
+      const excl=excludedCompCost(k)+excludedAluCost(k);
       html+=`<tr>
         <td style="font-size:11px">${p.label} <span style="color:var(--muted);font-size:10px">(${p.unit})</span>${excl>0?`<span style="color:var(--muted);font-size:10px"> — client supplies (−${fmt(excl)})</span>`:''}</td>
         <td style="text-align:right;font-family:'DM Mono',monospace;font-size:11px">${fmt(p.frank)}</td>
