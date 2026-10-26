@@ -468,10 +468,17 @@ input:focus,select:focus{outline:none;border-color:var(--primary)}
     </div>
   </div>
   <div class="card">
-    <div class="card-header"><div class="card-title"><span class="chip chip-o">🧪</span> Material Components</div></div>
-    <div style="font-size:12px;color:var(--muted);margin-bottom:10px">Spacer cost per tile type, switchable off per job (e.g. client supplies their own spacers). "Materials" is whatever's left of the Material rate above (adhesive, bonding liquid, grout) — switched off per job via the separate Materials toggle.</div>
+    <div class="card-header"><div class="card-title"><span class="chip chip-o">🧪</span> Material Unit Costs</div></div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:10px">Enter what you actually pay per pack/bag and how many m² it covers — the R/m² rate is worked out for you and feeds the Materials/Spacers toggles on every job. Grout has its own coverage for Mosaic (more grout lines per m²).</div>
     <div style="overflow-x:auto;-webkit-overflow-scrolling:touch">
-      <table class="ptbl"><thead><tr><th>Tile Type</th><th>Spacers</th><th>Materials</th></tr></thead><tbody id="mcomp-body"></tbody></table>
+      <table class="ptbl"><thead><tr><th>Material</th><th>Price/pack (R)</th><th>Coverage (m²)</th><th>R/m²</th></tr></thead><tbody id="munit-body"></tbody></table>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-header"><div class="card-title"><span class="chip chip-o">🧪</span> Material Cost Breakdown</div></div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:10px">Read-only — how each tile type's Material rate above splits into Adhesive/Bonding/Grout/Spacers (from Material Unit Costs) and "Other" (trims, offcuts, etc. — always charged, not switchable).</div>
+    <div style="overflow-x:auto;-webkit-overflow-scrolling:touch">
+      <table class="ptbl"><thead><tr><th>Tile Type</th><th>Adhesive</th><th>Bonding</th><th>Grout</th><th>Spacers</th><th>Other</th></tr></thead><tbody id="mcomp-body"></tbody></table>
     </div>
   </div>
   <div class="card">
@@ -562,15 +569,14 @@ input:focus,select:focus{outline:none;border-color:var(--primary)}
 // PRICING — Real Costs 2026
 // Note: 'nf' and 'fs' removed — tile type selector handles these
 // ═══════════════════════════════════════════════════════
-const SPACER_COST = 25.88; // flat R/m², same across all tile types
 const DP = {
-  sw:  { label:'Shower Walls',             unit:'m²', frank:90,    mat:108.87, inv:233.20, comp:{spc:SPACER_COST} },
-  sf:  { label:'Shower Floors',            unit:'m²', frank:169,   mat:108.87, inv:386.90, comp:{spc:SPACER_COST} },
-  nt:  { label:'Normal Tiling',            unit:'m²', frank:90,    mat:143.44, inv:275.60, comp:{spc:SPACER_COST} },
-  ot:  { label:'Oversized Tiling',         unit:'m²', frank:169,   mat:143.44, inv:318.00, comp:{spc:SPACER_COST} },
-  st:  { label:'Subway Tiling',            unit:'m²', frank:116,   mat:143.44, inv:381.60, comp:{spc:SPACER_COST} },
-  mt:  { label:'Mosaic Tiling',            unit:'m²', frank:169,   mat:143.44, inv:498.20, comp:{spc:SPACER_COST} },
-  pt:  { label:'Patio Tiling',             unit:'m²', frank:90,    mat:108.87, inv:206.70, comp:{spc:SPACER_COST} },
+  sw:  { label:'Shower Walls',             unit:'m²', frank:90,    mat:108.87, inv:233.20 },
+  sf:  { label:'Shower Floors',            unit:'m²', frank:169,   mat:108.87, inv:386.90 },
+  nt:  { label:'Normal Tiling',            unit:'m²', frank:90,    mat:143.44, inv:275.60 },
+  ot:  { label:'Oversized Tiling',         unit:'m²', frank:169,   mat:143.44, inv:318.00 },
+  st:  { label:'Subway Tiling',            unit:'m²', frank:116,   mat:143.44, inv:381.60 },
+  mt:  { label:'Mosaic Tiling',            unit:'m²', frank:169,   mat:143.44, inv:498.20 },
+  pt:  { label:'Patio Tiling',             unit:'m²', frank:90,    mat:108.87, inv:206.70 },
   wps:  { label:'Sealing of Showers',         unit:'m²', frank:0,   mat:56.95,  inv:296.80 },
   wpp:  { label:'Waterproofing (Patio)',      unit:'m²', frank:0,   mat:44.45,  inv:212.00 },
   wpsh: { label:'WP — per Shower (Tiler)',    unit:'ea', frank:400, mat:0,      inv:0      },
@@ -617,10 +623,28 @@ const ALUM_OPTIONS= [{value:'none',label:'No aluminium'},{value:'a12',label:'Alu
 const FLOOR_SECS  = ['pt'];
 const LIN_KEYS    = ['a12','a10','a45','skp','skw','sdk','ska'];
 const BASE_TILE_KEYS = ['sw','sf','nt','ot','st','mt','pt'];
-const COMP_KEYS = ['spc'];
-const COMP_LABELS = {spc:'Spacers'};
 const SUPPLY_KEYS = ['mat','spc','alu'];
 const ALUM_KEYS = ['a12','a10','a45'];
+// Material Unit Costs: price per pack/bag ÷ coverage (m²) = R/m². Grout has a
+// separate coverage for Mosaic (mt) since it uses more grout per m²; the rest
+// (Adhesive, Bonding Liquid, Spacers) are flat across every tile type.
+const MAT_UNIT_DEFS = [
+  {key:'adh',   label:'Adhesive'},
+  {key:'bond',  label:'Bonding Liquid'},
+  {key:'grt',   label:'Grout (Standard)'},
+  {key:'grtMt', label:'Grout (Mosaic)'},
+  {key:'spc',   label:'Spacers'},
+];
+const DEFAULT_MAT_UNIT = {
+  adh:{price:0,cov:0}, bond:{price:0,cov:0},
+  grt:{price:0,cov:0}, grtMt:{price:0,cov:0},
+  spc:{price:25.88,cov:1},
+};
+function unitRate(u){ return (u&&u.cov>0) ? u.price/u.cov : 0; }
+function compForKey(key){
+  const grt = key==='mt' ? matUnit.grtMt : matUnit.grt;
+  return { adh:unitRate(matUnit.adh), bond:unitRate(matUnit.bond), grt:unitRate(grt), spc:unitRate(matUnit.spc) };
+}
 
 // Custom tile types (user-added via Prices tab). {key,label,areas:['wall'|'sf'|'nf'|'patio'|'stoep',...]}
 const CUSTOM_AREA_DEFS = [
@@ -667,7 +691,7 @@ function addCustomTile(){
   const inv  =pf(document.getElementById('ct-inv').value);
   const key=slugKey(label);
   customTiles.push({key,label,areas:[...newCTAreas]});
-  P[key]={label,unit:'m²',frank,mat,inv,comp:{spc:SPACER_COST}};
+  P[key]={label,unit:'m²',frank,mat,inv};
   saveCustomTiles();
   localStorage.setItem('tjc_prices',JSON.stringify(P));
   rebuildTileLists();
@@ -689,24 +713,15 @@ function deleteCustomTile(key){
   if(curId) loadJob(curId);
 }
 
-// ── Material components: Spacers (flat R/m²) + Materials (everything else — adhesive/bonding/grout) ──
-function ensureCompFields(){
-  // Migrates pre-existing saved prices too: the old adh/bond/grt/spc split always
-  // defaulted spc to 0 (never settable via UI), so any stored 0 here is that stale
-  // default, not a deliberate R0 spacer cost — bump it to the real flat rate.
-  TILE_KEYS.forEach(k=>{
-    if(!P[k]) return;
-    if(!P[k].comp) P[k].comp={spc:SPACER_COST};
-    else if(!P[k].comp.spc) P[k].comp.spc=SPACER_COST;
-  });
-}
+// ── Material Unit Costs (price/pack ÷ coverage) → Spacers / Materials toggles ──
 function excludedCompCost(key){
-  const comp=(P[key]&&P[key].comp)||null; if(!comp) return 0;
-  const p=P[key];
-  const spc=Math.min(comp.spc||0, p.mat||0);
+  const p=P[key]; if(!p||!TILE_KEYS.has(key)) return 0;
+  const c=compForKey(key);
+  const spc=Math.min(c.spc, p.mat||0);
+  const known=Math.min(c.adh+c.bond+c.grt, Math.max(0,(p.mat||0)-spc));
   let excl=0;
   if(matSupplied.spc===false) excl+=spc;
-  if(matSupplied.mat===false) excl+=Math.max(0,(p.mat||0)-spc);
+  if(matSupplied.mat===false) excl+=known;
   return Math.min(excl, p.mat||0);
 }
 function excludedAluCost(key){
@@ -715,23 +730,37 @@ function excludedAluCost(key){
 }
 function effMat(key){ return (P[key]?P[key].mat:0) - excludedCompCost(key) - excludedAluCost(key); }
 function effInv(key){ return (P[key]?P[key].inv:0) - excludedCompCost(key) - excludedAluCost(key); }
-function updComp(key,comp,val){
-  if(!P[key])return; if(!P[key].comp)P[key].comp={spc:SPACER_COST};
-  P[key].comp[comp]=pf(val);
-  localStorage.setItem('tjc_prices',JSON.stringify(P));
-  const p=P[key],otherEl=document.getElementById('mcomp-other-'+key);
-  if(otherEl){const other=Math.max(0,p.mat-(p.comp.spc||0));otherEl.textContent=fmt(other);}
-  renderCostBreakdown();calcAll();
+function updMatUnit(key,field,val){
+  if(!matUnit[key])return;
+  matUnit[key][field]=pf(val);
+  localStorage.setItem('tjc_matunit',JSON.stringify(matUnit));
+  renderMatUnitCosts();renderMatComponents();renderCostBreakdown();calcAll();
+}
+function renderMatUnitCosts(){
+  const tb=document.getElementById('munit-body');if(!tb)return;
+  tb.innerHTML=MAT_UNIT_DEFS.map(({key,label})=>{
+    const u=matUnit[key]||{price:0,cov:0};
+    return `<tr><td style="font-size:11px">${label}</td>`+
+      `<td><input type="number" min="0" step="0.01" value="${(u.price||0).toFixed(2)}" oninput="updMatUnit('${key}','price',this.value)"></td>`+
+      `<td><input type="number" min="0" step="0.01" value="${(u.cov||0).toFixed(2)}" oninput="updMatUnit('${key}','cov',this.value)"></td>`+
+      `<td style="font-size:11px;color:var(--muted)">${fmt(unitRate(u))}</td></tr>`;
+  }).join('');
 }
 function renderMatComponents(){
   const tb=document.getElementById('mcomp-body');if(!tb)return;
   const tileGrp=PRICE_GROUPS.find(g=>g.title==='Tile Rates');
   tb.innerHTML=tileGrp.keys.filter(k=>P[k]).map(k=>{
-    const p=P[k],comp=p.comp||{spc:SPACER_COST};
-    const other=Math.max(0,p.mat-(comp.spc||0));
+    const p=P[k],c=compForKey(k);
+    const spc=Math.min(c.spc,p.mat||0);
+    const known=Math.min(c.adh+c.bond+c.grt, Math.max(0,(p.mat||0)-spc));
+    const scale=(c.adh+c.bond+c.grt)>0 ? known/(c.adh+c.bond+c.grt) : 0;
+    const other=Math.max(0,(p.mat||0)-spc-known);
     return `<tr><td style="font-size:11px;max-width:100px">${p.label}</td>`+
-      `<td><input type="number" min="0" step="0.01" value="${(comp.spc||0).toFixed(2)}" oninput="updComp('${k}','spc',this.value)" onchange="renderMatComponents()"></td>`+
-      `<td style="font-size:11px;color:var(--muted)" id="mcomp-other-${k}">${fmt(other)}</td></tr>`;
+      `<td style="font-size:11px">${fmt(c.adh*scale)}</td>`+
+      `<td style="font-size:11px">${fmt(c.bond*scale)}</td>`+
+      `<td style="font-size:11px">${fmt(c.grt*scale)}</td>`+
+      `<td style="font-size:11px">${fmt(spc)}</td>`+
+      `<td style="font-size:11px;color:var(--muted)">${fmt(other)}</td></tr>`;
   }).join('');
 }
 function toggleMatSupplied(comp){
@@ -759,13 +788,13 @@ function renderMatSupplied(){
 //   nFloorType:'nt', nFloors:[{id,l,w}],
 //   niches:0, benches:0 }
 // ═══════════════════════════════════════════════════════
-let jobs={}, curId=null, P={}, sett={vat:15}, priceHistory=[];
+let jobs={}, curId=null, P={}, sett={vat:15}, priceHistory=[], matUnit={};
 let baths=[], panels={}, patioWP=false, patioFrankWP=false, lins={};
 let matSupplied={mat:true,spc:true,alu:true};
 let patioTileType='pt', patioA45='';
 let doors=[], stoeps=[], otherTiling=[];
 
-const APP_VERSION='2026.10.25-1';
+const APP_VERSION='2026.10.26-1';
 
 // ── Boot ──
 window.onload = () => {
@@ -776,6 +805,8 @@ window.onload = () => {
   sett         = JSON.parse(localStorage.getItem('tjc_sett')      || '{"vat":15}');
   priceHistory = JSON.parse(localStorage.getItem('tjc_price_hist')|| '[]');
   customTiles  = JSON.parse(localStorage.getItem('tjc_custom_tiles')|| '[]');
+  matUnit      = JSON.parse(localStorage.getItem('tjc_matunit')  || 'null') || clone(DEFAULT_MAT_UNIT);
+  MAT_UNIT_DEFS.forEach(({key})=>{ if(!matUnit[key]) matUnit[key]=clone(DEFAULT_MAT_UNIT[key]); });
   Object.keys(DP).forEach(k=>{ if(!P[k]) P[k]=clone(DP[k]); });
   // Remove legacy nf/fs from prices if present
   delete P.nf; delete P.fs;
@@ -783,8 +814,7 @@ window.onload = () => {
   if(P.wps.frank===27.22) P.wps.frank=0;
   if(P.wpp.frank===27.22) P.wpp.frank=0;
   rebuildTileLists();
-  ensureCompFields();
-  rebuildJobSel(); renderPriceTable(); renderCostBreakdown(); renderPriceHistory(); renderPatioTileRow(); renderCTAreaPills(); renderMatComponents();
+  rebuildJobSel(); renderPriceTable(); renderCostBreakdown(); renderPriceHistory(); renderPatioTileRow(); renderCTAreaPills(); renderMatUnitCosts(); renderMatComponents();
   document.getElementById('s-vat').value        = sett.vat;
   document.getElementById('vat-pct').textContent = sett.vat;
   const last=localStorage.getItem('tjc_last');
