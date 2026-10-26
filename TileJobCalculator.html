@@ -161,6 +161,15 @@ input:focus,select:focus{outline:none;border-color:var(--primary)}
 .tag-a12{background:var(--purple-bg);color:var(--purple)}
 .door-feeds{display:flex;gap:4px;flex-wrap:wrap;margin-top:6px;padding-top:6px;border-top:1px dashed var(--border)}
 
+/* ── TOOL HIRE ROWS ── */
+.tool-row{display:grid;grid-template-columns:1fr 64px 48px 70px 28px;gap:6px;align-items:center;margin-bottom:7px}
+.tool-row input[type=text]{padding:8px 9px;font-size:13px;border-radius:8px;border:1.5px solid var(--border);background:#fff}
+.tool-row input[type=number]{padding:8px 6px;font-size:13px;font-family:'DM Mono',monospace;text-align:center;border-radius:8px;border:1.5px solid var(--border);background:#fff}
+.tool-row input:focus{border-color:var(--primary);outline:none}
+.tool-row .tool-cost{font-size:12px;font-family:'DM Mono',monospace;text-align:right;color:var(--muted)}
+.tool-labels{display:grid;grid-template-columns:1fr 64px 48px 70px 28px;gap:6px;margin-bottom:5px}
+.tool-labels span{font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px}
+
 /* ── ALUM ROW ── */
 .alum-row{display:flex;align-items:center;gap:8px;padding:9px 0;border-top:1px dashed var(--border);margin-top:6px}
 .alum-label{font-size:12px;font-weight:700;color:var(--muted);flex:1}
@@ -370,6 +379,20 @@ input:focus,select:focus{outline:none;border-color:var(--primary)}
     </div>
   </div>
 
+  <div class="sec-hdr" onclick="toggleSec('tools')">Tool Hire <span class="sec-chev" id="chev-tools">▾</span></div>
+  <div class="sec-body" id="sb-tools">
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title"><span class="chip chip-o">🔧</span> Hired Tools</div>
+        <button class="btn btn-primary btn-sm" onclick="addTool()">+ Tool</button>
+      </div>
+      <div id="tool-labels" style="display:none"><div class="tool-labels"><span>Tool</span><span style="text-align:center">R/day</span><span style="text-align:center">Days</span><span style="text-align:right">Cost</span><span></span></div></div>
+      <div id="tool-list"></div>
+      <div class="sec-total" id="tool-tot" style="display:none">Total: <strong>R0.00</strong></div>
+      <div id="tool-empty" style="font-size:12px;color:var(--muted);font-style:italic">No tools hired — tap + Tool to add</div>
+    </div>
+  </div>
+
 </div><!-- /meas -->
 
 <!-- ══ SUMMARY ══ -->
@@ -522,6 +545,7 @@ input:focus,select:focus{outline:none;border-color:var(--primary)}
   <div class="card">
     <div class="card-header"><div class="card-title"><span class="chip chip-b">⚙️</span> Settings</div></div>
     <div class="field"><label>VAT Rate (%)</label><input type="number" id="s-vat" value="15" min="0" max="50" step="0.5" oninput="saveSett()"></div>
+    <div class="field"><label>Tool Hire Markup (%)</label><input type="number" id="s-tool-markup" value="10" min="0" max="200" step="1" oninput="saveSett()"></div>
   </div>
   <div class="card">
     <div class="card-header"><div class="card-title"><span class="chip chip-g">💾</span> Data Management</div></div>
@@ -788,13 +812,13 @@ function renderMatSupplied(){
 //   nFloorType:'nt', nFloors:[{id,l,w}],
 //   niches:0, benches:0 }
 // ═══════════════════════════════════════════════════════
-let jobs={}, curId=null, P={}, sett={vat:15}, priceHistory=[], matUnit={};
+let jobs={}, curId=null, P={}, sett={vat:15,toolMarkup:10}, priceHistory=[], matUnit={};
 let baths=[], panels={}, patioWP=false, patioFrankWP=false, lins={};
 let matSupplied={mat:true,spc:true,alu:true};
 let patioTileType='pt', patioA45='';
-let doors=[], stoeps=[], otherTiling=[];
+let doors=[], stoeps=[], otherTiling=[], tools=[];
 
-const APP_VERSION='2026.10.26-1';
+const APP_VERSION='2026.10.26-2';
 
 // ── Boot ──
 window.onload = () => {
@@ -802,7 +826,8 @@ window.onload = () => {
   console.log('Tile Job Calculator', APP_VERSION);
   jobs         = JSON.parse(localStorage.getItem('tjc_jobs')      || '{}');
   P            = JSON.parse(localStorage.getItem('tjc_prices')    || 'null') || clone(DP);
-  sett         = JSON.parse(localStorage.getItem('tjc_sett')      || '{"vat":15}');
+  sett         = JSON.parse(localStorage.getItem('tjc_sett')      || '{"vat":15,"toolMarkup":10}');
+  if(sett.toolMarkup==null) sett.toolMarkup=10;
   priceHistory = JSON.parse(localStorage.getItem('tjc_price_hist')|| '[]');
   customTiles  = JSON.parse(localStorage.getItem('tjc_custom_tiles')|| '[]');
   matUnit      = JSON.parse(localStorage.getItem('tjc_matunit')  || 'null') || clone(DEFAULT_MAT_UNIT);
@@ -816,6 +841,7 @@ window.onload = () => {
   rebuildTileLists();
   rebuildJobSel(); renderPriceTable(); renderCostBreakdown(); renderPriceHistory(); renderPatioTileRow(); renderCTAreaPills(); renderMatUnitCosts(); renderMatComponents();
   document.getElementById('s-vat').value        = sett.vat;
+  document.getElementById('s-tool-markup').value = sett.toolMarkup;
   document.getElementById('vat-pct').textContent = sett.vat;
   const last=localStorage.getItem('tjc_last');
   if(last&&jobs[last]){document.getElementById('jobSel').value=last;loadJob(last);}
@@ -941,6 +967,10 @@ function buildMatRows(Q){
     const rate=effMat(k);
     if(rate>0) rows.push({label:p.label, qty, unit:p.unit, rate, amt:qty*rate});
   });
+  tools.forEach(t=>{
+    const cost=toolCost(t); if(!cost) return;
+    rows.push({label:'Tool Hire — '+(t.name||'Unnamed'), qty:pf(t.days), unit:'days', rate:pf(t.rate), amt:cost});
+  });
   return rows;
 }
 
@@ -979,6 +1009,10 @@ function buildInvoiceLines(Q){
     lines.push({key:k, label:P[k].label, qty:Q[k], unit:'ea', rate:P[k].inv, amt:Q[k]*P[k].inv});
   });
 
+  // Tool Hire — consolidated single line, cost + markup
+  const toolAmt=totalToolInv();
+  if(toolAmt>0) lines.push({key:'TOOLS', label:'Tool Hire', qty:1, unit:'ea', rate:toolAmt, amt:toolAmt});
+
   return lines;
 }
 
@@ -1002,7 +1036,7 @@ function createJob(){
   jobs[id]={name,client,ts:Date.now(),date:new Date().toISOString().split('T')[0],
     notes:'',baths:[],panels:{},patioWP:false,patioFrankWP:false,lins:{},patioTileType:'pt',patioA45:'',doors:[],stoeps:[],wastage:0,
     invoiced:false,invoicedDate:'',tilerPaid:false,tilerPaidDate:'',
-    matSupplied:{mat:true,spc:true,alu:true},otherTiling:[]};
+    matSupplied:{mat:true,spc:true,alu:true},otherTiling:[],tools:[]};
   saveJobs();rebuildJobSel();closeModal();
   document.getElementById('m-name').value='';document.getElementById('m-client').value='';
   document.getElementById('jobSel').value=id;loadJob(id);
@@ -1028,6 +1062,7 @@ function loadJob(id){
   doors         =clone(j.doors         ||[]);
   stoeps        =clone(j.stoeps||[]).map(s=>({...s,panels:(s.panels||[]).map(migratePanel)}));
   otherTiling   =j.otherTiling ? clone(j.otherTiling).map(o=>({...o,panels:(o.panels||[]).map(migratePanel)})) : migrateOtherTiling(j);
+  tools         =clone(j.tools         ||[]);
   matSupplied   ={mat:true,spc:true,alu:true,...(j.matSupplied||{})};
   renderAllBaths();
   FLOOR_SECS.forEach(k=>renderFloorPanels(k));
@@ -1036,7 +1071,7 @@ function loadJob(id){
   LIN_KEYS.forEach(k=>{const el=document.getElementById('li-'+k);if(el)el.value=lins[k]||'';});
   document.getElementById('patio-a45').value=patioA45;
   renderPatioTileRow();
-  renderAllDoors();renderAllStoeps();renderAllOtherTiling();
+  renderAllDoors();renderAllStoeps();renderAllOtherTiling();renderAllTools();
   renderStatus();renderMatSupplied();
   updateAutoNotes();calcAll();
 }
@@ -1064,13 +1099,13 @@ function migrateBaths(j){
   });
 }
 function clearAll(){
-  baths=[];panels={};patioWP=false;patioFrankWP=false;lins={};patioTileType='pt';patioA45='';doors=[];stoeps=[];otherTiling=[];
+  baths=[];panels={};patioWP=false;patioFrankWP=false;lins={};patioTileType='pt';patioA45='';doors=[];stoeps=[];otherTiling=[];tools=[];
   matSupplied={mat:true,spc:true,alu:true};
   ['f-name','f-date','f-client','f-notes','f-wastage'].forEach(i=>document.getElementById(i).value='');
   renderAllBaths();FLOOR_SECS.forEach(k=>{panels[k]=[];renderFloorPanels(k);});
   LIN_KEYS.forEach(k=>{const el=document.getElementById('li-'+k);if(el)el.value='';});
   document.getElementById('patio-a45').value='';
-  renderPatioTileRow();renderAllDoors();renderAllStoeps();renderAllOtherTiling();
+  renderPatioTileRow();renderAllDoors();renderAllStoeps();renderAllOtherTiling();renderAllTools();
   renderStatus();renderMatSupplied();
 }
 function renderStatus(){
@@ -1208,6 +1243,7 @@ function autoSave(){
     wastage:parseInt(document.getElementById('f-wastage').value)||0,
     baths:clone(baths), panels:clone(panels), patioWP, patioFrankWP, lins:clone(lins),
     patioTileType, patioA45, doors:clone(doors), stoeps:clone(stoeps), otherTiling:clone(otherTiling),
+    tools:clone(tools),
   };
   const opt=document.getElementById('jobSel').querySelector(`option[value="${curId}"]`);
   if(opt)opt.textContent=document.getElementById('f-name').value||curId;
@@ -1610,6 +1646,33 @@ function renderAllDoors(){
 }
 
 // ═══════════════════════════════════════════════════════
+// TOOL HIRE
+// ═══════════════════════════════════════════════════════
+function addTool(){if(!curId){alert('Please select or create a job first.');return;}tools.push({id:uid(),name:'',rate:'',days:''});renderAllTools();autoSave();}
+function removeTool(tid){tools=tools.filter(t=>t.id!==tid);renderAllTools();autoSave();}
+function updateTool(tid,field,val){const t=tools.find(t=>t.id===tid);if(t)t[field]=val;renderAllTools();autoSave();}
+function toolCost(t){ return pf(t.rate)*pf(t.days); }
+function totalToolCost(){ return tools.reduce((s,t)=>s+toolCost(t),0); }
+function totalToolInv(){ return totalToolCost()*(1+(pf(sett.toolMarkup)||0)/100); }
+function renderAllTools(){
+  const list=document.getElementById('tool-list');if(!list)return;list.innerHTML='';
+  tools.forEach(t=>{
+    const row=document.createElement('div');row.className='tool-row';
+    row.innerHTML=`<input type="text" placeholder="e.g. Tile saw" value="${t.name||''}" oninput="updateTool('${t.id}','name',this.value)">`+
+      `<input type="number" placeholder="0.00" min="0" step="0.01" value="${t.rate||''}" oninput="updateTool('${t.id}','rate',this.value)">`+
+      `<input type="number" placeholder="0" min="0" step="1" value="${t.days||''}" oninput="updateTool('${t.id}','days',this.value)">`+
+      `<span class="tool-cost">${fmt(toolCost(t))}</span>`+
+      `<button class="rmv" onclick="removeTool('${t.id}')">×</button>`;
+    list.appendChild(row);
+  });
+  const has=tools.length>0;
+  const totEl=document.getElementById('tool-tot'),empEl=document.getElementById('tool-empty'),labEl=document.getElementById('tool-labels');
+  if(totEl){totEl.innerHTML=`Total: <strong>${fmt(totalToolCost())}</strong>`;totEl.style.display=has?'block':'none';}
+  if(empEl)empEl.style.display=has?'none':'block';
+  if(labEl)labEl.style.display=has?'block':'none';
+}
+
+// ═══════════════════════════════════════════════════════
 // FRONT STOEP
 // ═══════════════════════════════════════════════════════
 function addStoep(){if(!curId){alert('Please select or create a job first.');return;}stoeps.push({id:uid(),name:'Front Stoep '+(stoeps.length+1),panels:[],tileType:'nt',alumType:'a45',alumL:''});renderAllStoeps();autoSave();document.getElementById('stoep-list').lastElementChild?.scrollIntoView({behavior:'smooth',block:'start'});}
@@ -1882,7 +1945,7 @@ function setDirectStoep(sid,pid,val){
 // ═══════════════════════════════════════════════════════
 // COLLAPSIBLE SECTIONS
 // ═══════════════════════════════════════════════════════
-const SEC_IDS=['bathrooms','floors','patio','doors','stoep','profiles'];
+const SEC_IDS=['bathrooms','floors','patio','doors','stoep','profiles','tools'];
 function toggleSec(id){
   const body=document.getElementById('sb-'+id);
   const chev=document.getElementById('chev-'+id);
@@ -2023,7 +2086,11 @@ function updPrice(key,field,val){
   renderCostBreakdown();localStorage.setItem('tjc_prices',JSON.stringify(P));calcAll();
 }
 function resetPrices(){if(!confirm('Reset built-in prices to the 2026 defaults? (Your custom tile types keep their current rates.)'))return;Object.keys(DP).forEach(k=>P[k]=clone(DP[k]));localStorage.setItem('tjc_prices',JSON.stringify(P));renderPriceTable();renderCostBreakdown();calcAll();}
-function saveSett(){sett.vat=pf(document.getElementById('s-vat').value)||15;localStorage.setItem('tjc_sett',JSON.stringify(sett));calcAll();}
+function saveSett(){
+  sett.vat=pf(document.getElementById('s-vat').value)||15;
+  sett.toolMarkup=pf(document.getElementById('s-tool-markup').value)||0;
+  localStorage.setItem('tjc_sett',JSON.stringify(sett));calcAll();
+}
 
 function applyRateAdj(field){
   const pct=pf(document.getElementById('adj-pct').value);
