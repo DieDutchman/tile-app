@@ -758,16 +758,19 @@ function updMatUnit(key,field,val){
   if(!matUnit[key])return;
   matUnit[key][field]=pf(val);
   localStorage.setItem('tjc_matunit',JSON.stringify(matUnit));
-  renderMatUnitCosts();renderMatComponents();renderCostBreakdown();calcAll();
+  const rateEl=document.getElementById('munit-rate-'+key);
+  if(rateEl)rateEl.textContent=fmt(unitRate(matUnit[key]));
+  calcAll();
 }
+function onMatUnitChange(){ renderMatUnitCosts();renderMatComponents();renderCostBreakdown(); }
 function renderMatUnitCosts(){
   const tb=document.getElementById('munit-body');if(!tb)return;
   tb.innerHTML=MAT_UNIT_DEFS.map(({key,label})=>{
     const u=matUnit[key]||{price:0,cov:0};
     return `<tr><td style="font-size:11px">${label}</td>`+
-      `<td><input type="number" min="0" step="0.01" value="${(u.price||0).toFixed(2)}" oninput="updMatUnit('${key}','price',this.value)"></td>`+
-      `<td><input type="number" min="0" step="0.01" value="${(u.cov||0).toFixed(2)}" oninput="updMatUnit('${key}','cov',this.value)"></td>`+
-      `<td style="font-size:11px;color:var(--muted)">${fmt(unitRate(u))}</td></tr>`;
+      `<td><input type="number" min="0" step="0.01" value="${(u.price||0).toFixed(2)}" oninput="updMatUnit('${key}','price',this.value)" onchange="onMatUnitChange()"></td>`+
+      `<td><input type="number" min="0" step="0.01" value="${(u.cov||0).toFixed(2)}" oninput="updMatUnit('${key}','cov',this.value)" onchange="onMatUnitChange()"></td>`+
+      `<td style="font-size:11px;color:var(--muted)" id="munit-rate-${key}">${fmt(unitRate(u))}</td></tr>`;
   }).join('');
 }
 function renderMatComponents(){
@@ -818,7 +821,7 @@ let matSupplied={mat:true,spc:true,alu:true};
 let patioTileType='pt', patioA45='';
 let doors=[], stoeps=[], otherTiling=[], tools=[];
 
-const APP_VERSION='2026.10.26-2';
+const APP_VERSION='2026.10.26-3';
 
 // ── Boot ──
 window.onload = () => {
@@ -859,6 +862,12 @@ const clone=x=>JSON.parse(JSON.stringify(x));
 const fmt  =n=>'R'+n.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g,',');
 const pf   =x=>parseFloat(x)||0;
 const uid  =()=>Date.now()+'_'+Math.random().toString(36).slice(2,5);
+function focusNewRow(inputId){
+  requestAnimationFrame(()=>{
+    const el=document.getElementById(inputId);
+    if(el){ el.scrollIntoView({behavior:'smooth',block:'center'}); el.focus(); }
+  });
+}
 const wallArea   =w=>w.direct?pf(w.m2||0):pf(w.l)*pf(w.h);
 const panelArea  =arr=>(arr||[]).reduce((s,r)=>s+(r.direct?pf(r.m2||0):pf(r.l)*pf(r.w)),0);
 const panelWPArea=arr=>(arr||[]).reduce((s,r)=>r.wps?s+(r.direct?pf(r.m2||0):pf(r.l)*pf(r.w)):s,0);
@@ -1437,7 +1446,7 @@ function renderSideWalls(bid){
 }
 
 // Shower floor ops
-function addSFloor(bid){const b=getBath(bid);if(!b)return;b.sFloors.push({id:uid(),l:'',w:'',wps:true,direct:false,m2:''});renderSFloors(bid);autoSave();}
+function addSFloor(bid){const b=getBath(bid);if(!b)return;const r={id:uid(),l:'',w:'',wps:true,direct:false,m2:''};b.sFloors.push(r);renderSFloors(bid);autoSave();focusNewRow('sf-l-'+r.id);}
 function removeSFloor(bid,pid){const b=getBath(bid);if(!b)return;b.sFloors=b.sFloors.filter(r=>r.id!==pid);renderSFloors(bid);autoSave();}
 function updateSFloor(bid,pid,field,val){
   const b=getBath(bid);if(!b)return;const r=b.sFloors.find(r=>r.id===pid);if(r){r[field]=val;r.direct=false;}
@@ -1465,7 +1474,7 @@ function renderSFloors(bid){
 }
 
 // Normal floor ops
-function addNFloor(bid){const b=getBath(bid);if(!b)return;b.nFloors.push({id:uid(),l:'',w:'',direct:false,m2:'',desc:''});renderNFloors(bid);autoSave();}
+function addNFloor(bid){const b=getBath(bid);if(!b)return;const r={id:uid(),l:'',w:'',direct:false,m2:'',desc:''};b.nFloors.push(r);renderNFloors(bid);autoSave();focusNewRow('nf-l-'+r.id);}
 function removeNFloor(bid,pid){const b=getBath(bid);if(!b)return;b.nFloors=b.nFloors.filter(r=>r.id!==pid);renderNFloors(bid);autoSave();}
 function updateNFloor(bid,pid,field,val){
   const b=getBath(bid);if(!b)return;const r=b.nFloors.find(r=>r.id===pid);if(r){r[field]=val;r.direct=false;}
@@ -1648,9 +1657,14 @@ function renderAllDoors(){
 // ═══════════════════════════════════════════════════════
 // TOOL HIRE
 // ═══════════════════════════════════════════════════════
-function addTool(){if(!curId){alert('Please select or create a job first.');return;}tools.push({id:uid(),name:'',rate:'',days:''});renderAllTools();autoSave();}
+function addTool(){if(!curId){alert('Please select or create a job first.');return;}const t={id:uid(),name:'',rate:'',days:''};tools.push(t);renderAllTools();autoSave();focusNewRow('tool-name-'+t.id);}
 function removeTool(tid){tools=tools.filter(t=>t.id!==tid);renderAllTools();autoSave();}
-function updateTool(tid,field,val){const t=tools.find(t=>t.id===tid);if(t)t[field]=val;renderAllTools();autoSave();}
+function updateTool(tid,field,val){
+  const t=tools.find(t=>t.id===tid);if(!t)return;t[field]=val;
+  const costEl=document.getElementById('tool-cost-'+tid);
+  if(costEl)costEl.textContent=fmt(toolCost(t));
+  autoSave();
+}
 function toolCost(t){ return pf(t.rate)*pf(t.days); }
 function totalToolCost(){ return tools.reduce((s,t)=>s+toolCost(t),0); }
 function totalToolInv(){ return totalToolCost()*(1+(pf(sett.toolMarkup)||0)/100); }
@@ -1658,10 +1672,10 @@ function renderAllTools(){
   const list=document.getElementById('tool-list');if(!list)return;list.innerHTML='';
   tools.forEach(t=>{
     const row=document.createElement('div');row.className='tool-row';
-    row.innerHTML=`<input type="text" placeholder="e.g. Tile saw" value="${t.name||''}" oninput="updateTool('${t.id}','name',this.value)">`+
-      `<input type="number" placeholder="0.00" min="0" step="0.01" value="${t.rate||''}" oninput="updateTool('${t.id}','rate',this.value)">`+
-      `<input type="number" placeholder="0" min="0" step="1" value="${t.days||''}" oninput="updateTool('${t.id}','days',this.value)">`+
-      `<span class="tool-cost">${fmt(toolCost(t))}</span>`+
+    row.innerHTML=`<input id="tool-name-${t.id}" type="text" placeholder="e.g. Tile saw" value="${t.name||''}" oninput="updateTool('${t.id}','name',this.value)">`+
+      `<input id="tool-rate-${t.id}" type="number" placeholder="0.00" min="0" step="0.01" value="${t.rate||''}" oninput="updateTool('${t.id}','rate',this.value)" onchange="renderAllTools()">`+
+      `<input id="tool-days-${t.id}" type="number" placeholder="0" min="0" step="1" value="${t.days||''}" oninput="updateTool('${t.id}','days',this.value)" onchange="renderAllTools()">`+
+      `<span class="tool-cost" id="tool-cost-${t.id}">${fmt(toolCost(t))}</span>`+
       `<button class="rmv" onclick="removeTool('${t.id}')">×</button>`;
     list.appendChild(row);
   });
@@ -1678,7 +1692,7 @@ function renderAllTools(){
 function addStoep(){if(!curId){alert('Please select or create a job first.');return;}stoeps.push({id:uid(),name:'Front Stoep '+(stoeps.length+1),panels:[],tileType:'nt',alumType:'a45',alumL:''});renderAllStoeps();autoSave();document.getElementById('stoep-list').lastElementChild?.scrollIntoView({behavior:'smooth',block:'start'});}
 function removeStoep(sid){if(!confirm('Remove this stoep area?'))return;stoeps=stoeps.filter(s=>s.id!==sid);renderAllStoeps();autoSave();}
 function renameStoep(sid,val){const s=stoeps.find(s=>s.id===sid);if(s)s.name=val;autoSave();}
-function addStoepPanel(sid){const s=stoeps.find(s=>s.id===sid);if(!s)return;s.panels.push({id:uid(),l:'',w:'',direct:false,m2:'',desc:''});renderStoepPanels(sid);autoSave();}
+function addStoepPanel(sid){const s=stoeps.find(s=>s.id===sid);if(!s)return;const p={id:uid(),l:'',w:'',direct:false,m2:'',desc:''};s.panels.push(p);renderStoepPanels(sid);autoSave();focusNewRow('st-l-'+p.id);}
 function removeStoepPanel(sid,pid){const s=stoeps.find(s=>s.id===sid);if(!s)return;s.panels=s.panels.filter(p=>p.id!==pid);renderStoepPanels(sid);autoSave();}
 function updateStoepPanel(sid,pid,field,val){
   const s=stoeps.find(s=>s.id===sid);if(!s)return;const p=s.panels.find(p=>p.id===pid);if(p){p[field]=val;p.direct=false;}
@@ -1765,7 +1779,7 @@ function renderAllStoeps(){
 function addOtherTiling(){if(!curId){alert('Please select or create a job first.');return;}otherTiling.push({id:uid(),name:'Tiling Area '+(otherTiling.length+1),panels:[],tileType:'nt',surface:'floor'});renderAllOtherTiling();autoSave();document.getElementById('othertile-list').lastElementChild?.scrollIntoView({behavior:'smooth',block:'start'});}
 function removeOtherTiling(oid){if(!confirm('Remove this tiling area?'))return;otherTiling=otherTiling.filter(o=>o.id!==oid);renderAllOtherTiling();autoSave();}
 function renameOtherTiling(oid,val){const o=otherTiling.find(o=>o.id===oid);if(o)o.name=val;autoSave();}
-function addOtherPanel(oid){const o=otherTiling.find(o=>o.id===oid);if(!o)return;o.panels.push({id:uid(),l:'',w:'',direct:false,m2:'',desc:''});renderOtherPanels(oid);autoSave();}
+function addOtherPanel(oid){const o=otherTiling.find(o=>o.id===oid);if(!o)return;const p={id:uid(),l:'',w:'',direct:false,m2:'',desc:''};o.panels.push(p);renderOtherPanels(oid);autoSave();focusNewRow('ot-l-'+p.id);}
 function removeOtherPanel(oid,pid){const o=otherTiling.find(o=>o.id===oid);if(!o)return;o.panels=o.panels.filter(p=>p.id!==pid);renderOtherPanels(oid);autoSave();}
 function updateOtherPanel(oid,pid,field,val){
   const o=otherTiling.find(o=>o.id===oid);if(!o)return;const p=o.panels.find(p=>p.id===pid);if(p){p[field]=val;p.direct=false;}
@@ -1864,7 +1878,7 @@ function migrateOtherTiling(j){
 // ═══════════════════════════════════════════════════════
 // FLOOR PANELS (outside bathroom)
 // ═══════════════════════════════════════════════════════
-function addFloorPanel(sec){if(!curId){alert('Please select or create a job first.');return;}if(!panels[sec])panels[sec]=[];panels[sec].push({id:uid(),l:'',w:'',direct:false,m2:'',desc:''});renderFloorPanels(sec);autoSave();}
+function addFloorPanel(sec){if(!curId){alert('Please select or create a job first.');return;}if(!panels[sec])panels[sec]=[];const r={id:uid(),l:'',w:'',direct:false,m2:'',desc:''};panels[sec].push(r);renderFloorPanels(sec);autoSave();focusNewRow('fp-l-'+r.id);}
 function rmFloorPanel(sec,id){panels[sec]=(panels[sec]||[]).filter(r=>r.id!==id);renderFloorPanels(sec);autoSave();}
 function upFloorPanel(sec,id,field,val){
   const r=(panels[sec]||[]).find(r=>r.id===id);if(r){r[field]=val;r.direct=false;}
