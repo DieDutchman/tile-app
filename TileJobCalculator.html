@@ -392,9 +392,7 @@ input:focus,select:focus{outline:none;border-color:var(--primary)}
   <div class="card">
     <div class="card-header"><div class="card-title"><span class="chip chip-b">🧪</span> Materials Supplied</div></div>
     <div style="font-size:12px;color:var(--muted);margin-bottom:8px">Switch off anything the client is supplying themselves for this job — their cost drops out of both your materials cost and their invoice.</div>
-    <div class="tog-row"><div class="tog-info"><div class="tlabel">Adhesive</div></div><div class="toggle" id="tog-ms-adh" onclick="toggleMatSupplied('adh')"></div></div>
-    <div class="tog-row"><div class="tog-info"><div class="tlabel">Bonding Liquid</div></div><div class="toggle" id="tog-ms-bond" onclick="toggleMatSupplied('bond')"></div></div>
-    <div class="tog-row"><div class="tog-info"><div class="tlabel">Grout</div></div><div class="toggle" id="tog-ms-grt" onclick="toggleMatSupplied('grt')"></div></div>
+    <div class="tog-row"><div class="tog-info"><div class="tlabel">Materials</div></div><div class="toggle" id="tog-ms-mat" onclick="toggleMatSupplied('mat')"></div></div>
     <div class="tog-row"><div class="tog-info"><div class="tlabel">Spacers</div></div><div class="toggle" id="tog-ms-spc" onclick="toggleMatSupplied('spc')"></div></div>
     <div class="tog-row"><div class="tog-info"><div class="tlabel">Aluminium</div></div><div class="toggle" id="tog-ms-alu" onclick="toggleMatSupplied('alu')"></div></div>
   </div>
@@ -431,9 +429,7 @@ input:focus,select:focus{outline:none;border-color:var(--primary)}
   <div class="card">
     <div class="card-header"><div class="card-title"><span class="chip chip-b">🧪</span> Materials Supplied</div></div>
     <div style="font-size:12px;color:var(--muted);margin-bottom:8px">Switch off anything the client is supplying themselves for this job.</div>
-    <div class="tog-row"><div class="tog-info"><div class="tlabel">Adhesive</div></div><div class="toggle" id="tog-cms-adh" onclick="toggleMatSupplied('adh')"></div></div>
-    <div class="tog-row"><div class="tog-info"><div class="tlabel">Bonding Liquid</div></div><div class="toggle" id="tog-cms-bond" onclick="toggleMatSupplied('bond')"></div></div>
-    <div class="tog-row"><div class="tog-info"><div class="tlabel">Grout</div></div><div class="toggle" id="tog-cms-grt" onclick="toggleMatSupplied('grt')"></div></div>
+    <div class="tog-row"><div class="tog-info"><div class="tlabel">Materials</div></div><div class="toggle" id="tog-cms-mat" onclick="toggleMatSupplied('mat')"></div></div>
     <div class="tog-row"><div class="tog-info"><div class="tlabel">Spacers</div></div><div class="toggle" id="tog-cms-spc" onclick="toggleMatSupplied('spc')"></div></div>
     <div class="tog-row"><div class="tog-info"><div class="tlabel">Aluminium</div></div><div class="toggle" id="tog-cms-alu" onclick="toggleMatSupplied('alu')"></div></div>
   </div>
@@ -473,9 +469,9 @@ input:focus,select:focus{outline:none;border-color:var(--primary)}
   </div>
   <div class="card">
     <div class="card-header"><div class="card-title"><span class="chip chip-o">🧪</span> Material Components</div></div>
-    <div style="font-size:12px;color:var(--muted);margin-bottom:10px">Split each tile type's material cost into named components you can switch off per job (e.g. client supplies their own adhesive). "Other" is whatever's left of the Material rate above once these are subtracted — it stays charged either way.</div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:10px">Spacer cost per tile type, switchable off per job (e.g. client supplies their own spacers). "Materials" is whatever's left of the Material rate above (adhesive, bonding liquid, grout) — switched off per job via the separate Materials toggle.</div>
     <div style="overflow-x:auto;-webkit-overflow-scrolling:touch">
-      <table class="ptbl"><thead><tr><th>Tile Type</th><th>Adhesive</th><th>Bonding</th><th>Grout</th><th>Spacers</th><th>Other</th></tr></thead><tbody id="mcomp-body"></tbody></table>
+      <table class="ptbl"><thead><tr><th>Tile Type</th><th>Spacers</th><th>Materials</th></tr></thead><tbody id="mcomp-body"></tbody></table>
     </div>
   </div>
   <div class="card">
@@ -566,14 +562,15 @@ input:focus,select:focus{outline:none;border-color:var(--primary)}
 // PRICING — Real Costs 2026
 // Note: 'nf' and 'fs' removed — tile type selector handles these
 // ═══════════════════════════════════════════════════════
+const SPACER_COST = 25.88; // flat R/m², same across all tile types
 const DP = {
-  sw:  { label:'Shower Walls',             unit:'m²', frank:90,    mat:108.87, inv:233.20, comp:{adh:0,bond:0,grt:0,spc:0} },
-  sf:  { label:'Shower Floors',            unit:'m²', frank:169,   mat:108.87, inv:386.90, comp:{adh:0,bond:0,grt:0,spc:0} },
-  nt:  { label:'Normal Tiling',            unit:'m²', frank:90,    mat:143.44, inv:275.60, comp:{adh:0,bond:0,grt:0,spc:0} },
-  ot:  { label:'Oversized Tiling',         unit:'m²', frank:169,   mat:143.44, inv:318.00, comp:{adh:0,bond:0,grt:0,spc:0} },
-  st:  { label:'Subway Tiling',            unit:'m²', frank:116,   mat:143.44, inv:381.60, comp:{adh:0,bond:0,grt:0,spc:0} },
-  mt:  { label:'Mosaic Tiling',            unit:'m²', frank:169,   mat:143.44, inv:498.20, comp:{adh:0,bond:0,grt:0,spc:0} },
-  pt:  { label:'Patio Tiling',             unit:'m²', frank:90,    mat:108.87, inv:206.70, comp:{adh:0,bond:0,grt:0,spc:0} },
+  sw:  { label:'Shower Walls',             unit:'m²', frank:90,    mat:108.87, inv:233.20, comp:{spc:SPACER_COST} },
+  sf:  { label:'Shower Floors',            unit:'m²', frank:169,   mat:108.87, inv:386.90, comp:{spc:SPACER_COST} },
+  nt:  { label:'Normal Tiling',            unit:'m²', frank:90,    mat:143.44, inv:275.60, comp:{spc:SPACER_COST} },
+  ot:  { label:'Oversized Tiling',         unit:'m²', frank:169,   mat:143.44, inv:318.00, comp:{spc:SPACER_COST} },
+  st:  { label:'Subway Tiling',            unit:'m²', frank:116,   mat:143.44, inv:381.60, comp:{spc:SPACER_COST} },
+  mt:  { label:'Mosaic Tiling',            unit:'m²', frank:169,   mat:143.44, inv:498.20, comp:{spc:SPACER_COST} },
+  pt:  { label:'Patio Tiling',             unit:'m²', frank:90,    mat:108.87, inv:206.70, comp:{spc:SPACER_COST} },
   wps:  { label:'Sealing of Showers',         unit:'m²', frank:0,   mat:56.95,  inv:296.80 },
   wpp:  { label:'Waterproofing (Patio)',      unit:'m²', frank:0,   mat:44.45,  inv:212.00 },
   wpsh: { label:'WP — per Shower (Tiler)',    unit:'ea', frank:400, mat:0,      inv:0      },
@@ -620,9 +617,9 @@ const ALUM_OPTIONS= [{value:'none',label:'No aluminium'},{value:'a12',label:'Alu
 const FLOOR_SECS  = ['pt'];
 const LIN_KEYS    = ['a12','a10','a45','skp','skw','sdk','ska'];
 const BASE_TILE_KEYS = ['sw','sf','nt','ot','st','mt','pt'];
-const COMP_KEYS = ['adh','bond','grt','spc'];
-const COMP_LABELS = {adh:'Adhesive',bond:'Bonding Liquid',grt:'Grout',spc:'Spacers'};
-const SUPPLY_KEYS = [...COMP_KEYS,'alu'];
+const COMP_KEYS = ['spc'];
+const COMP_LABELS = {spc:'Spacers'};
+const SUPPLY_KEYS = ['mat','spc','alu'];
 const ALUM_KEYS = ['a12','a10','a45'];
 
 // Custom tile types (user-added via Prices tab). {key,label,areas:['wall'|'sf'|'nf'|'patio'|'stoep',...]}
@@ -670,7 +667,7 @@ function addCustomTile(){
   const inv  =pf(document.getElementById('ct-inv').value);
   const key=slugKey(label);
   customTiles.push({key,label,areas:[...newCTAreas]});
-  P[key]={label,unit:'m²',frank,mat,inv,comp:{adh:0,bond:0,grt:0,spc:0}};
+  P[key]={label,unit:'m²',frank,mat,inv,comp:{spc:SPACER_COST}};
   saveCustomTiles();
   localStorage.setItem('tjc_prices',JSON.stringify(P));
   rebuildTileLists();
@@ -692,13 +689,25 @@ function deleteCustomTile(key){
   if(curId) loadJob(curId);
 }
 
-// ── Material components (adhesive/bonding/grout/spacers) ──
+// ── Material components: Spacers (flat R/m²) + Materials (everything else — adhesive/bonding/grout) ──
 function ensureCompFields(){
-  TILE_KEYS.forEach(k=>{ if(P[k]&&!P[k].comp) P[k].comp={adh:0,bond:0,grt:0,spc:0}; });
+  // Migrates pre-existing saved prices too: the old adh/bond/grt/spc split always
+  // defaulted spc to 0 (never settable via UI), so any stored 0 here is that stale
+  // default, not a deliberate R0 spacer cost — bump it to the real flat rate.
+  TILE_KEYS.forEach(k=>{
+    if(!P[k]) return;
+    if(!P[k].comp) P[k].comp={spc:SPACER_COST};
+    else if(!P[k].comp.spc) P[k].comp.spc=SPACER_COST;
+  });
 }
 function excludedCompCost(key){
   const comp=(P[key]&&P[key].comp)||null; if(!comp) return 0;
-  return COMP_KEYS.reduce((s,c)=> s + (matSupplied[c]===false ? (comp[c]||0) : 0), 0);
+  const p=P[key];
+  const spc=Math.min(comp.spc||0, p.mat||0);
+  let excl=0;
+  if(matSupplied.spc===false) excl+=spc;
+  if(matSupplied.mat===false) excl+=Math.max(0,(p.mat||0)-spc);
+  return Math.min(excl, p.mat||0);
 }
 function excludedAluCost(key){
   if(!ALUM_KEYS.includes(key) || matSupplied.alu!==false) return 0;
@@ -707,21 +716,21 @@ function excludedAluCost(key){
 function effMat(key){ return (P[key]?P[key].mat:0) - excludedCompCost(key) - excludedAluCost(key); }
 function effInv(key){ return (P[key]?P[key].inv:0) - excludedCompCost(key) - excludedAluCost(key); }
 function updComp(key,comp,val){
-  if(!P[key])return; if(!P[key].comp)P[key].comp={adh:0,bond:0,grt:0,spc:0};
+  if(!P[key])return; if(!P[key].comp)P[key].comp={spc:SPACER_COST};
   P[key].comp[comp]=pf(val);
   localStorage.setItem('tjc_prices',JSON.stringify(P));
   const p=P[key],otherEl=document.getElementById('mcomp-other-'+key);
-  if(otherEl){const other=Math.max(0,p.mat-COMP_KEYS.reduce((s,c)=>s+(p.comp[c]||0),0));otherEl.textContent=fmt(other);}
+  if(otherEl){const other=Math.max(0,p.mat-(p.comp.spc||0));otherEl.textContent=fmt(other);}
   renderCostBreakdown();calcAll();
 }
 function renderMatComponents(){
   const tb=document.getElementById('mcomp-body');if(!tb)return;
   const tileGrp=PRICE_GROUPS.find(g=>g.title==='Tile Rates');
   tb.innerHTML=tileGrp.keys.filter(k=>P[k]).map(k=>{
-    const p=P[k],comp=p.comp||{adh:0,bond:0,grt:0,spc:0};
-    const other=Math.max(0,p.mat-COMP_KEYS.reduce((s,c)=>s+(comp[c]||0),0));
+    const p=P[k],comp=p.comp||{spc:SPACER_COST};
+    const other=Math.max(0,p.mat-(comp.spc||0));
     return `<tr><td style="font-size:11px;max-width:100px">${p.label}</td>`+
-      COMP_KEYS.map(c=>`<td><input type="number" min="0" step="0.01" value="${(comp[c]||0).toFixed(2)}" oninput="updComp('${k}','${c}',this.value)" onchange="renderMatComponents()"></td>`).join('')+
+      `<td><input type="number" min="0" step="0.01" value="${(comp.spc||0).toFixed(2)}" oninput="updComp('${k}','spc',this.value)" onchange="renderMatComponents()"></td>`+
       `<td style="font-size:11px;color:var(--muted)" id="mcomp-other-${k}">${fmt(other)}</td></tr>`;
   }).join('');
 }
@@ -752,7 +761,7 @@ function renderMatSupplied(){
 // ═══════════════════════════════════════════════════════
 let jobs={}, curId=null, P={}, sett={vat:15}, priceHistory=[];
 let baths=[], panels={}, patioWP=false, patioFrankWP=false, lins={};
-let matSupplied={adh:true,bond:true,grt:true,spc:true,alu:true};
+let matSupplied={mat:true,spc:true,alu:true};
 let patioTileType='pt', patioA45='';
 let doors=[], stoeps=[], otherTiling=[];
 
@@ -963,7 +972,7 @@ function createJob(){
   jobs[id]={name,client,ts:Date.now(),date:new Date().toISOString().split('T')[0],
     notes:'',baths:[],panels:{},patioWP:false,patioFrankWP:false,lins:{},patioTileType:'pt',patioA45:'',doors:[],stoeps:[],wastage:0,
     invoiced:false,invoicedDate:'',tilerPaid:false,tilerPaidDate:'',
-    matSupplied:{adh:true,bond:true,grt:true,spc:true,alu:true},otherTiling:[]};
+    matSupplied:{mat:true,spc:true,alu:true},otherTiling:[]};
   saveJobs();rebuildJobSel();closeModal();
   document.getElementById('m-name').value='';document.getElementById('m-client').value='';
   document.getElementById('jobSel').value=id;loadJob(id);
@@ -989,7 +998,7 @@ function loadJob(id){
   doors         =clone(j.doors         ||[]);
   stoeps        =clone(j.stoeps||[]).map(s=>({...s,panels:(s.panels||[]).map(migratePanel)}));
   otherTiling   =j.otherTiling ? clone(j.otherTiling).map(o=>({...o,panels:(o.panels||[]).map(migratePanel)})) : migrateOtherTiling(j);
-  matSupplied   ={adh:true,bond:true,grt:true,spc:true,alu:true,...(j.matSupplied||{})};
+  matSupplied   ={mat:true,spc:true,alu:true,...(j.matSupplied||{})};
   renderAllBaths();
   FLOOR_SECS.forEach(k=>renderFloorPanels(k));
   document.getElementById('tog-wpp').classList.toggle('on',patioWP);
@@ -1026,7 +1035,7 @@ function migrateBaths(j){
 }
 function clearAll(){
   baths=[];panels={};patioWP=false;patioFrankWP=false;lins={};patioTileType='pt';patioA45='';doors=[];stoeps=[];otherTiling=[];
-  matSupplied={adh:true,bond:true,grt:true,spc:true,alu:true};
+  matSupplied={mat:true,spc:true,alu:true};
   ['f-name','f-date','f-client','f-notes','f-wastage'].forEach(i=>document.getElementById(i).value='');
   renderAllBaths();FLOOR_SECS.forEach(k=>{panels[k]=[];renderFloorPanels(k);});
   LIN_KEYS.forEach(k=>{const el=document.getElementById('li-'+k);if(el)el.value='';});
