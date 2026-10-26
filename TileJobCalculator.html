@@ -752,8 +752,12 @@ function excludedAluCost(key){
   if(!ALUM_KEYS.includes(key) || matSupplied.alu!==false) return 0;
   return P[key]?P[key].mat:0;
 }
+function excludedAluInv(key){
+  if(!ALUM_KEYS.includes(key) || matSupplied.alu!==false) return 0;
+  return P[key]?P[key].inv:0;
+}
 function effMat(key){ return (P[key]?P[key].mat:0) - excludedCompCost(key) - excludedAluCost(key); }
-function effInv(key){ return (P[key]?P[key].inv:0) - excludedCompCost(key) - excludedAluCost(key); }
+function effInv(key){ return (P[key]?P[key].inv:0) - excludedCompCost(key) - excludedAluInv(key); }
 function updMatUnit(key,field,val){
   if(!matUnit[key])return;
   matUnit[key][field]=pf(val);
@@ -821,7 +825,7 @@ let matSupplied={mat:true,spc:true,alu:true};
 let patioTileType='pt', patioA45='';
 let doors=[], stoeps=[], otherTiling=[], tools=[];
 
-const APP_VERSION='2026.10.26-3';
+const APP_VERSION='2026.10.26-4';
 
 // ── Boot ──
 window.onload = () => {
@@ -2185,7 +2189,7 @@ function renderCostBreakdown(){
       const profit=inv-cost;
       const margin=inv>0?(profit/inv*100):0;
       const mColor=margin>=0?'var(--green)':'var(--red)';
-      const excl=excludedCompCost(k)+excludedAluCost(k);
+      const excl=excludedCompCost(k)+excludedAluInv(k);
       html+=`<tr>
         <td style="font-size:11px">${p.label} <span style="color:var(--muted);font-size:10px">(${p.unit})</span>${excl>0?`<span style="color:var(--muted);font-size:10px"> — client supplies (−${fmt(excl)})</span>`:''}</td>
         <td style="text-align:right;font-family:'DM Mono',monospace;font-size:11px">${fmt(p.frank)}</td>
