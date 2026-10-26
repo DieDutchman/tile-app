@@ -407,6 +407,11 @@ input:focus,select:focus{outline:none;border-color:var(--primary)}
     </div>
   </div>
 
+  <div class="card">
+    <button class="btn btn-primary" style="width:100%" onclick="sbPush()">⬆ Push to Cloud</button>
+    <div class="sb-status-el" style="font-size:11px;color:var(--muted);text-align:center;min-height:16px;margin-top:6px"></div>
+  </div>
+
 </div><!-- /meas -->
 
 <!-- ══ SUMMARY ══ -->
@@ -571,7 +576,7 @@ input:focus,select:focus{outline:none;border-color:var(--primary)}
     <div style="font-size:11px;color:var(--muted)">Export saves all jobs as a JSON backup file. Import merges or replaces from a backup.</div>
   </div>
   <div class="card">
-    <div class="card-header"><div class="card-title"><span class="chip chip-b">☁️</span> Cloud Sync</div><span id="sb-dot" style="width:8px;height:8px;border-radius:50%;background:var(--border);flex-shrink:0"></span></div>
+    <div class="card-header"><div class="card-title"><span class="chip chip-b">☁️</span> Cloud Sync</div><span id="sb-dot" class="sb-dot-el" style="width:8px;height:8px;border-radius:50%;background:var(--border);flex-shrink:0"></span></div>
     <div class="field" style="margin-bottom:8px">
       <label>Supabase Project URL</label>
       <input type="url" id="sb-url" placeholder="https://xxxxxx.supabase.co" oninput="saveSbConfig()">
@@ -584,7 +589,7 @@ input:focus,select:focus{outline:none;border-color:var(--primary)}
       <button class="btn btn-primary" style="flex:1" onclick="sbPush()">⬆ Push to Cloud</button>
       <button class="btn btn-ghost" style="flex:1" onclick="sbPull()">⬇ Pull from Cloud</button>
     </div>
-    <div id="sb-status" style="font-size:11px;color:var(--muted);text-align:center;min-height:16px"></div>
+    <div id="sb-status" class="sb-status-el" style="font-size:11px;color:var(--muted);text-align:center;min-height:16px"></div>
   </div>
 </div>
 </div>
@@ -843,7 +848,7 @@ let matSupplied={mat:true,spc:true,alu:true};
 let patioTileType='pt', patioA45='';
 let doors=[], stoeps=[], otherTiling=[], tools=[], travelRate='', travelDays='';
 
-const APP_VERSION='2026.10.26-6';
+const APP_VERSION='2026.10.26-7';
 
 // ── Boot ──
 window.onload = () => {
@@ -1242,9 +1247,8 @@ function sbHeaders(){
 }
 function sbBaseUrl(){return(localStorage.getItem('tjc_sb_url')||'').replace(/\/$/,'');}
 function sbSetStatus(msg,ok){
-  const el=document.getElementById('sb-status');if(el)el.textContent=msg;
-  const dot=document.getElementById('sb-dot');
-  if(dot)dot.style.background=ok===true?'var(--green)':ok===false?'var(--red)':'var(--border)';
+  document.querySelectorAll('.sb-status-el').forEach(el=>el.textContent=msg);
+  document.querySelectorAll('.sb-dot-el').forEach(dot=>dot.style.background=ok===true?'var(--green)':ok===false?'var(--red)':'var(--border)');
 }
 async function sbPush(){
   const url=sbBaseUrl();if(!url||!localStorage.getItem('tjc_sb_key')){alert('Add Supabase URL and Anon Key in Settings.');return;}
