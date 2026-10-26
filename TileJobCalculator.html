@@ -613,14 +613,18 @@ const DP = {
   sdk: { label:'Sliding Door Skirting',    unit:'m',  frank:37,    mat:11.76,  inv:68.90  },
   ska: { label:'Sika / PVC Joint',         unit:'m',  frank:0,     mat:35.42,  inv:55.12  },
   ni:  { label:'Niche',                    unit:'ea', frank:164,   mat:72.17,  inv:315.50 },
+  nia: { label:'Niche — Aluminium Edge',   unit:'ea', frank:164,   mat:72.17,  inv:315.50 },
+  nic: { label:'Niche — Chamfered Edge',   unit:'ea', frank:164,   mat:72.17,  inv:315.50 },
   be:  { label:'Bench',                    unit:'ea', frank:164,   mat:72.17,  inv:295.50 },
+  bea: { label:'Bench — Aluminium Edge',   unit:'ea', frank:164,   mat:72.17,  inv:295.50 },
+  bec: { label:'Bench — Chamfered Edge',   unit:'ea', frank:164,   mat:72.17,  inv:295.50 },
 };
 
 // INVOICE CONSOLIDATION RULES
 // Tile areas: each tile type key gets its own line — 'nt' collects ALL normal tile areas
 // (walls, floors, stoep, patio — wherever that tile type is chosen)
 // wps/wpp each get own invoice line; skp+sdk → "Tile Skirting"; wpsh/wppt Frank-only (inv=0, not in invoice)
-const INVOICE_ORDER = ['sw','sf','nt','ot','st','mt','pt','wps','wpp','SKIRT','skw','a12','a10','a45','ska','ni','be'];
+const INVOICE_ORDER = ['sw','sf','nt','ot','st','mt','pt','wps','wpp','SKIRT','skw','a12','a10','a45','ska','ni','nia','nic','be','bea','bec'];
 const TILE_KEYS = new Set(['sw','sf','nt','ot','st','mt','pt']);
 
 const PRICE_GROUPS = [
@@ -628,7 +632,7 @@ const PRICE_GROUPS = [
   { title:'Waterproofing — Invoice & Materials (per m²)', keys:['wps','wpp'] },
   { title:'Waterproofing — Tiler Flat Fees (per job)',   keys:['wpsh','wppt'] },
   { title:'Profiles & Skirtings',  keys:['a12','a10','a45','skp','skw','sdk','ska'] },
-  { title:'Feature Items',         keys:['ni','be'] },
+  { title:'Feature Items',         keys:['ni','nia','nic','be','bea','bec'] },
 ];
 
 // Tile type options per context
@@ -825,7 +829,7 @@ let matSupplied={mat:true,spc:true,alu:true};
 let patioTileType='pt', patioA45='';
 let doors=[], stoeps=[], otherTiling=[], tools=[];
 
-const APP_VERSION='2026.10.26-4';
+const APP_VERSION='2026.10.26-5';
 
 // ── Boot ──
 window.onload = () => {
@@ -897,7 +901,11 @@ function bathWallWPArea(b){
 const totalAutoA12 =()=>baths.reduce((s,b)=>s+bathA12Auto(b),0);
 const totalWPArea  =()=>baths.reduce((s,b)=>s+bathWallWPArea(b)+panelWPArea(b.sFloors),0);
 const totalNiches  =()=>baths.reduce((s,b)=>s+(b.niches||0),0);
+const totalNichesAlu     =()=>baths.reduce((s,b)=>s+(b.nichesAlu||0),0);
+const totalNichesChamfer =()=>baths.reduce((s,b)=>s+(b.nichesChamfer||0),0);
 const totalBenches =()=>baths.reduce((s,b)=>s+(b.benches||0),0);
+const totalBenchesAlu     =()=>baths.reduce((s,b)=>s+(b.benchesAlu||0),0);
+const totalBenchesChamfer =()=>baths.reduce((s,b)=>s+(b.benchesChamfer||0),0);
 const totalDoorLen =()=>doors.reduce((s,d)=>s+pf(d.l),0);
 const stoepAlum    =t=>stoeps.filter(s=>s.alumType===t).reduce((s,st)=>s+pf(st.alumL),0);
 
@@ -953,7 +961,11 @@ function computeQ(){
 
   // Counts
   add('ni', totalNiches());
+  add('nia', totalNichesAlu());
+  add('nic', totalNichesChamfer());
   add('be', totalBenches());
+  add('bea', totalBenchesAlu());
+  add('bec', totalBenchesChamfer());
 
   return Q;
 }
@@ -1017,7 +1029,7 @@ function buildInvoiceLines(Q){
   });
 
   // Feature items
-  ['ni','be'].forEach(k=>{
+  ['ni','nia','nic','be','bea','bec'].forEach(k=>{
     if(!Q[k]||!P[k]) return;
     lines.push({key:k, label:P[k].label, qty:Q[k], unit:'ea', rate:P[k].inv, amt:Q[k]*P[k].inv});
   });
@@ -1628,7 +1640,11 @@ function buildBathHTML(b,idx){
     <!-- FEATURE ITEMS -->
     <div class="bath-sub-hdr">Feature Items</div>
     <div class="cnt-row"><div class="cnt-label">Niches</div><div class="cnt-ctrl"><button class="cnt-btn" onclick="adjBath('${b.id}','niches',-1)">−</button><span class="cnt-val" id="bcnt-${b.id}-niches">${b.niches||0}</span><button class="cnt-btn" onclick="adjBath('${b.id}','niches',1)">+</button></div></div>
+    <div class="cnt-row"><div class="cnt-label">Niches — Aluminium Edge</div><div class="cnt-ctrl"><button class="cnt-btn" onclick="adjBath('${b.id}','nichesAlu',-1)">−</button><span class="cnt-val" id="bcnt-${b.id}-nichesAlu">${b.nichesAlu||0}</span><button class="cnt-btn" onclick="adjBath('${b.id}','nichesAlu',1)">+</button></div></div>
+    <div class="cnt-row"><div class="cnt-label">Niches — Chamfered Edge</div><div class="cnt-ctrl"><button class="cnt-btn" onclick="adjBath('${b.id}','nichesChamfer',-1)">−</button><span class="cnt-val" id="bcnt-${b.id}-nichesChamfer">${b.nichesChamfer||0}</span><button class="cnt-btn" onclick="adjBath('${b.id}','nichesChamfer',1)">+</button></div></div>
     <div class="cnt-row"><div class="cnt-label">Benches</div><div class="cnt-ctrl"><button class="cnt-btn" onclick="adjBath('${b.id}','benches',-1)">−</button><span class="cnt-val" id="bcnt-${b.id}-benches">${b.benches||0}</span><button class="cnt-btn" onclick="adjBath('${b.id}','benches',1)">+</button></div></div>
+    <div class="cnt-row"><div class="cnt-label">Benches — Aluminium Edge</div><div class="cnt-ctrl"><button class="cnt-btn" onclick="adjBath('${b.id}','benchesAlu',-1)">−</button><span class="cnt-val" id="bcnt-${b.id}-benchesAlu">${b.benchesAlu||0}</span><button class="cnt-btn" onclick="adjBath('${b.id}','benchesAlu',1)">+</button></div></div>
+    <div class="cnt-row"><div class="cnt-label">Benches — Chamfered Edge</div><div class="cnt-ctrl"><button class="cnt-btn" onclick="adjBath('${b.id}','benchesChamfer',-1)">−</button><span class="cnt-val" id="bcnt-${b.id}-benchesChamfer">${b.benchesChamfer||0}</span><button class="cnt-btn" onclick="adjBath('${b.id}','benchesChamfer',1)">+</button></div></div>
 
     </div>`; /* end bath-body */
 }
