@@ -393,6 +393,20 @@ input:focus,select:focus{outline:none;border-color:var(--primary)}
     </div>
   </div>
 
+  <div class="sec-hdr" onclick="toggleSec('travel')">Travel <span class="sec-chev" id="chev-travel">▾</span></div>
+  <div class="sec-body" id="sb-travel">
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title"><span class="chip chip-o">🚗</span> Travel</div>
+      </div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap">
+        <div class="field" style="flex:1;min-width:120px"><label>Rate per Day (R)</label><input type="number" id="travel-rate" placeholder="0.00" min="0" step="0.01" oninput="updateTravel()"></div>
+        <div class="field" style="flex:1;min-width:100px"><label>Days</label><input type="number" id="travel-days" placeholder="0" min="0" step="1" oninput="updateTravel()"></div>
+      </div>
+      <div class="sec-total" id="travel-tot" style="display:none">Total: <strong id="travel-cost">R0.00</strong></div>
+    </div>
+  </div>
+
 </div><!-- /meas -->
 
 <!-- ══ SUMMARY ══ -->
@@ -827,9 +841,9 @@ let jobs={}, curId=null, P={}, sett={vat:15,toolMarkup:10}, priceHistory=[], mat
 let baths=[], panels={}, patioWP=false, patioFrankWP=false, lins={};
 let matSupplied={mat:true,spc:true,alu:true};
 let patioTileType='pt', patioA45='';
-let doors=[], stoeps=[], otherTiling=[], tools=[];
+let doors=[], stoeps=[], otherTiling=[], tools=[], travelRate='', travelDays='';
 
-const APP_VERSION='2026.10.26-5';
+const APP_VERSION='2026.10.26-6';
 
 // ── Boot ──
 window.onload = () => {
@@ -996,6 +1010,8 @@ function buildMatRows(Q){
     const cost=toolCost(t); if(!cost) return;
     rows.push({label:'Tool Hire — '+(t.name||'Unnamed'), qty:pf(t.days), unit:'days', rate:pf(t.rate), amt:cost});
   });
+  const trav=travelCost();
+  if(trav>0) rows.push({label:'Travel', qty:pf(travelDays), unit:'days', rate:pf(travelRate), amt:trav});
   return rows;
 }
 
@@ -1038,6 +1054,10 @@ function buildInvoiceLines(Q){
   const toolAmt=totalToolInv();
   if(toolAmt>0) lines.push({key:'TOOLS', label:'Tool Hire', qty:1, unit:'ea', rate:toolAmt, amt:toolAmt});
 
+  // Travel — billed to client at cost, no markup
+  const travAmt=travelCost();
+  if(travAmt>0) lines.push({key:'TRAVEL', label:'Travel', qty:pf(travelDays), unit:'days', rate:pf(travelRate), amt:travAmt});
+
   return lines;
 }
 
@@ -1061,7 +1081,7 @@ function createJob(){
   jobs[id]={name,client,ts:Date.now(),date:new Date().toISOString().split('T')[0],
     notes:'',baths:[],panels:{},patioWP:false,patioFrankWP:false,lins:{},patioTileType:'pt',patioA45:'',doors:[],stoeps:[],wastage:0,
     invoiced:false,invoicedDate:'',tilerPaid:false,tilerPaidDate:'',
-    matSupplied:{mat:true,spc:true,alu:true},otherTiling:[],tools:[]};
+    matSupplied:{mat:true,spc:true,alu:true},otherTiling:[],tools:[],travelRate:'',travelDays:''};
   saveJobs();rebuildJobSel();closeModal();
   document.getElementById('m-name').value='';document.getElementById('m-client').value='';
   document.getElementById('jobSel').value=id;loadJob(id);
@@ -1088,6 +1108,8 @@ function loadJob(id){
   stoeps        =clone(j.stoeps||[]).map(s=>({...s,panels:(s.panels||[]).map(migratePanel)}));
   otherTiling   =j.otherTiling ? clone(j.otherTiling).map(o=>({...o,panels:(o.panels||[]).map(migratePanel)})) : migrateOtherTiling(j);
   tools         =clone(j.tools         ||[]);
+  travelRate    =j.travelRate||'';
+  travelDays    =j.travelDays||'';
   matSupplied   ={mat:true,spc:true,alu:true,...(j.matSupplied||{})};
   renderAllBaths();
   FLOOR_SECS.forEach(k=>renderFloorPanels(k));
@@ -1096,7 +1118,7 @@ function loadJob(id){
   LIN_KEYS.forEach(k=>{const el=document.getElementById('li-'+k);if(el)el.value=lins[k]||'';});
   document.getElementById('patio-a45').value=patioA45;
   renderPatioTileRow();
-  renderAllDoors();renderAllStoeps();renderAllOtherTiling();renderAllTools();
+  renderAllDoors();renderAllStoeps();renderAllOtherTiling();renderAllTools();renderTravel();
   renderStatus();renderMatSupplied();
   updateAutoNotes();calcAll();
 }
@@ -1125,12 +1147,13 @@ function migrateBaths(j){
 }
 function clearAll(){
   baths=[];panels={};patioWP=false;patioFrankWP=false;lins={};patioTileType='pt';patioA45='';doors=[];stoeps=[];otherTiling=[];tools=[];
+  travelRate='';travelDays='';
   matSupplied={mat:true,spc:true,alu:true};
   ['f-name','f-date','f-client','f-notes','f-wastage'].forEach(i=>document.getElementById(i).value='');
   renderAllBaths();FLOOR_SECS.forEach(k=>{panels[k]=[];renderFloorPanels(k);});
   LIN_KEYS.forEach(k=>{const el=document.getElementById('li-'+k);if(el)el.value='';});
   document.getElementById('patio-a45').value='';
-  renderPatioTileRow();renderAllDoors();renderAllStoeps();renderAllOtherTiling();renderAllTools();
+  renderPatioTileRow();renderAllDoors();renderAllStoeps();renderAllOtherTiling();renderAllTools();renderTravel();
   renderStatus();renderMatSupplied();
 }
 function renderStatus(){
@@ -1268,7 +1291,7 @@ function autoSave(){
     wastage:parseInt(document.getElementById('f-wastage').value)||0,
     baths:clone(baths), panels:clone(panels), patioWP, patioFrankWP, lins:clone(lins),
     patioTileType, patioA45, doors:clone(doors), stoeps:clone(stoeps), otherTiling:clone(otherTiling),
-    tools:clone(tools),
+    tools:clone(tools), travelRate, travelDays,
   };
   const opt=document.getElementById('jobSel').querySelector(`option[value="${curId}"]`);
   if(opt)opt.textContent=document.getElementById('f-name').value||curId;
@@ -1706,6 +1729,24 @@ function renderAllTools(){
   if(labEl)labEl.style.display=has?'block':'none';
 }
 
+// ── Travel (rate/day × days, billed to client at cost, no markup) ──
+function updateTravel(){
+  travelRate=document.getElementById('travel-rate').value;
+  travelDays=document.getElementById('travel-days').value;
+  const c=travelCost();
+  const costEl=document.getElementById('travel-cost'); if(costEl)costEl.textContent=fmt(c);
+  const totEl=document.getElementById('travel-tot'); if(totEl)totEl.style.display=c>0?'block':'none';
+  autoSave();
+}
+function travelCost(){ return pf(travelRate)*pf(travelDays); }
+function renderTravel(){
+  const rEl=document.getElementById('travel-rate'),dEl=document.getElementById('travel-days');
+  if(rEl)rEl.value=travelRate; if(dEl)dEl.value=travelDays;
+  const c=travelCost();
+  const costEl=document.getElementById('travel-cost'); if(costEl)costEl.textContent=fmt(c);
+  const totEl=document.getElementById('travel-tot'); if(totEl)totEl.style.display=c>0?'block':'none';
+}
+
 // ═══════════════════════════════════════════════════════
 // FRONT STOEP
 // ═══════════════════════════════════════════════════════
@@ -1979,7 +2020,7 @@ function setDirectStoep(sid,pid,val){
 // ═══════════════════════════════════════════════════════
 // COLLAPSIBLE SECTIONS
 // ═══════════════════════════════════════════════════════
-const SEC_IDS=['bathrooms','floors','patio','doors','stoep','profiles','tools'];
+const SEC_IDS=['bathrooms','floors','patio','doors','stoep','profiles','tools','travel'];
 function toggleSec(id){
   const body=document.getElementById('sb-'+id);
   const chev=document.getElementById('chev-'+id);
